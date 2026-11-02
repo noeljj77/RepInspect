@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 
 import * as api from '../api/repositories'
 
@@ -48,15 +49,83 @@ export function useAddRepository() {
   })
 }
 
+/** Store a repository returned by a mutation and refresh the library list. */
+function useSaveRepository() {
+  const queryClient = useQueryClient()
+  return (repository: api.RepositoryDetail) => {
+    queryClient.setQueryData([...repositoriesKey, repository.id], repository)
+    void queryClient.invalidateQueries({ queryKey: repositoriesKey, exact: true })
+  }
+}
+
+/**
+ * Start a new analysis: a retry, or a refresh. The current version's results stay valid
+ * (and on screen) until the new version finishes; see useReloadOnNewVersion.
+ */
 export function useStartAnalysis(id: string) {
+  const save = useSaveRepository()
+  return useMutation({ mutationFn: () => api.startAnalysis(id), onSuccess: save })
+}
+
+/** When the version on screen changes (a refresh finished), fetch its files and results. */
+export function useReloadOnNewVersion(repository: api.RepositoryDetail | undefined) {
+  const queryClient = useQueryClient()
+  const shown = useRef<string | null | undefined>(undefined)
+  const currentId = repository?.current_analysis?.id ?? null
+  useEffect(() => {
+    if (shown.current !== undefined && shown.current !== currentId && repository) {
+      void queryClient.invalidateQueries({
+        predicate: (query) =>
+          query.queryKey[0] === repositoriesKey[0] &&
+          query.queryKey[1] === repository.id &&
+          query.queryKey.length > 2,
+      })
+    }
+    shown.current = currentId
+  }, [currentId, queryClient, repository])
+}
+
+export function useUpdateLabels(id: string) {
+  const save = useSaveRepository()
+  return useMutation({ mutationFn: (labels: string[]) => api.updateLabels(id, labels), onSuccess: save })
+}
+
+export function useDeleteRepository(id: string) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => api.startAnalysis(id),
-    onSuccess: (repository) => {
-      clearResults(queryClient, id)
-      queryClient.setQueryData([...repositoriesKey, id], repository)
+    mutationFn: () => api.deleteRepository(id),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: [...repositoriesKey, id] })
       void queryClient.invalidateQueries({ queryKey: repositoriesKey, exact: true })
+      void queryClient.invalidateQueries({ queryKey: ['collections'] })
     },
+  })
+}
+
+export function useUploadZip() {
+  const save = useSaveRepository()
+  return useMutation({ mutationFn: api.uploadZip, onSuccess: save })
+}
+
+export function useUploadNewVersion(id: string) {
+  const save = useSaveRepository()
+  return useMutation({ mutationFn: (file: File) => api.uploadNewVersion(id, file), onSuccess: save })
+}
+
+export function useVersions(id: string, latestStatus: string | undefined) {
+  return useQuery({
+    // The newest status is part of the key, so the list reloads when a refresh moves on.
+    queryKey: [...repositoriesKey, id, 'versions', latestStatus],
+    queryFn: () => api.listVersions(id),
+  })
+}
+
+export function useVersionChanges(id: string, analysisId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: [...repositoriesKey, id, 'changes', analysisId],
+    queryFn: () => api.versionChanges(id, analysisId),
+    enabled,
+    ...FOREVER,
   })
 }
 

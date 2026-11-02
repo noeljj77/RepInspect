@@ -1,4 +1,4 @@
-import { apiFetch, apiPost } from './client'
+import { ApiError, apiFetch, apiPost, apiSend } from './client'
 
 export type AnalysisStatus =
   | 'queued'
@@ -20,6 +20,8 @@ export interface AnalysisSummary {
   skipped_summary: Record<string, number> | null
   redaction_count: number
   truncated: boolean
+  /** A newer version replaced this one and its stored files were deleted. */
+  source_removed: boolean
   created_at: string
   completed_at: string | null
 }
@@ -106,7 +108,8 @@ interface RepositoryBase {
   source_url: string | null
   owner: string | null
   name: string
-  label: string | null
+  labels: string[]
+  collection_ids: string[]
   created_at: string
 }
 
@@ -116,8 +119,38 @@ export interface RepositorySummary extends RepositoryBase {
 }
 
 export interface RepositoryDetail extends RepositoryBase {
+  /** The newest version, whatever its status: it may be a refresh still running. */
   latest_analysis: AnalysisDetail | null
+  /** The newest version that finished: what the page shows. */
+  current_analysis: AnalysisDetail | null
   important_files: ImportantFile[]
+}
+
+export interface PathChanges {
+  count: number
+  /** The first 100, sorted. */
+  paths: string[]
+}
+
+export interface Changes {
+  added: PathChanges
+  removed: PathChanges
+  modified: PathChanges
+  unchanged: number
+  /** False when an older version predates content hashes, so changes are judged by size. */
+  exact: boolean
+  technologies_added: string[]
+  technologies_removed: string[]
+  dependencies_added: string[]
+  dependencies_removed: string[]
+  dependencies_changed: string[]
+}
+
+export interface VersionChanges {
+  version: number
+  previous_version: number | null
+  previous_commit_sha: string | null
+  changes: Changes | null
 }
 
 export interface FileEntry {
@@ -182,6 +215,35 @@ export const getRepository = (id: string) => apiFetch<RepositoryDetail>(`/api/re
 export const addRepository = (url: string) => apiPost<RepositoryDetail>('/api/repositories', { url })
 export const startAnalysis = (id: string) =>
   apiPost<RepositoryDetail>(`/api/repositories/${id}/analyses`)
+
+export const updateLabels = (id: string, labels: string[]) =>
+  apiSend<RepositoryDetail>('PATCH', `/api/repositories/${id}`, { labels })
+export const deleteRepository = (id: string) => apiSend<void>('DELETE', `/api/repositories/${id}`)
+
+/** Matches the server's MAX_UPLOAD_BYTES. */
+export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+/** The file is sent as the raw request body, which lets the server stop an oversized upload early. */
+function sendZip(url: string, file: File) {
+  // Checked here too: a browser shows a refused oversized upload as a network error, not the message.
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return Promise.reject(
+      new ApiError(413, `The file is larger than the ${MAX_UPLOAD_BYTES / (1024 * 1024)} MB upload limit.`, null),
+    )
+  }
+  return apiFetch<RepositoryDetail>(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/zip' },
+    body: file,
+  })
+}
+export const uploadZip = (file: File) =>
+  sendZip(`/api/repositories/upload?name=${encodeURIComponent(file.name)}`, file)
+export const uploadNewVersion = (id: string, file: File) => sendZip(`/api/repositories/${id}/upload`, file)
+
+export const listVersions = (id: string) => apiFetch<AnalysisSummary[]>(`/api/repositories/${id}/analyses`)
+export const versionChanges = (id: string, analysisId: string) =>
+  apiFetch<VersionChanges>(`/api/repositories/${id}/analyses/${analysisId}/changes`)
 
 export const listFiles = (id: string) => apiFetch<FileEntry[]>(`/api/repositories/${id}/files`)
 export const readFile = (id: string, path: string) =>

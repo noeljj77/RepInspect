@@ -65,3 +65,11 @@ export function apiPost<T>(path: string, data?: unknown): Promise<T> {
     body: data === undefined ? undefined : JSON.stringify(data),
   })
 }
+
+export function apiSend<T>(method: 'PATCH' | 'PUT' | 'DELETE', path: string, data?: unknown): Promise<T> {
+  return apiFetch<T>(path, {
+    method,
+    headers: data === undefined ? {} : { 'Content-Type': 'application/json' },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  })
+}
