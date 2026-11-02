@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
-from app.models import SavedRepository, User
+from app.models import AnalysisStatus, RepositoryAnalysis, SavedRepository, User
 from app.services import repositories, users
 
 _NOT_AUTHENTICATED = HTTPException(
@@ -42,3 +42,14 @@ def get_owned_repository(
     if repository is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Repository not found")
     return repository
+
+
+def get_completed_analysis(
+    repository: SavedRepository = Depends(get_owned_repository),
+    db: Session = Depends(get_db),
+) -> RepositoryAnalysis:
+    """The repository's latest analysis, once it has finished successfully."""
+    analysis = repositories.latest_analysis(db, repository.id)
+    if analysis is None or analysis.status != AnalysisStatus.COMPLETED:
+        raise HTTPException(status.HTTP_409_CONFLICT, detail="The analysis has not finished yet")
+    return analysis

@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -16,21 +16,22 @@ from app.models import (
     User,
 )
 from app.schemas.repository import (
-    FileContent,
-    FileEntry,
+    ImportantFile,
     RepositoryCreate,
     RepositoryDetail,
     RepositorySummary,
 )
 from app.services import repositories
+from app.services.analysis.importance import IMPORTANT_THRESHOLD
 from app.services.ingestion.errors import InvalidRepositoryUrl
 from app.services.ingestion.github_url import parse_github_url
 from app.services.ingestion.pipeline import run_github_analysis
-from app.storage import artifacts
 from app.worker.runner import JobRunner, get_job_runner
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/repositories", tags=["repositories"])
+
+MAX_IMPORTANT_FILES = 12
 
 
 def _start_analysis(
@@ -51,6 +52,54 @@ def _start_analysis(
 
 def _is_in_progress(analysis: RepositoryAnalysis | None) -> bool:
     return analysis is not None and analysis.status in IN_PROGRESS_STATUSES
+
+
+def _base(repository: SavedRepository) -> dict:
+    return {
+        "id": repository.id,
+        "source_type": repository.source_type,
+        "source_url": repository.source_url,
+        "owner": repository.owner,
+        "name": repository.name,
+        "label": repository.label,
+        "created_at": repository.created_at,
+    }
+
+
+def _important_files(db: Session, analysis: RepositoryAnalysis) -> list[ImportantFile]:
+    rows = db.scalars(
+        select(AnalysisFile)
+        .where(
+            AnalysisFile.analysis_id == analysis.id,
+            AnalysisFile.skipped_reason.is_(None),
+            AnalysisFile.importance_score >= IMPORTANT_THRESHOLD,
+        )
+        .order_by(AnalysisFile.importance_score.desc(), AnalysisFile.path)
+        .limit(MAX_IMPORTANT_FILES)
+    )
+    return [
+        ImportantFile(
+            path=f.path,
+            language=f.language,
+            score=f.importance_score,
+            reasons=f.importance_reasons or [],
+        )
+        for f in rows
+    ]
+
+
+def _detail(
+    db: Session, repository: SavedRepository, analysis: RepositoryAnalysis | None
+) -> RepositoryDetail:
+    completed = analysis is not None and analysis.status == AnalysisStatus.COMPLETED
+    return RepositoryDetail.model_validate(
+        {
+            **_base(repository),
+            "latest_analysis": analysis,
+            "important_files": _important_files(db, analysis) if completed else [],
+        },
+        from_attributes=True,
+    )
 
 
 @router.post("", response_model=RepositoryDetail, status_code=status.HTTP_202_ACCEPTED)
@@ -78,9 +127,7 @@ def add_repository(
         response.status_code = status.HTTP_200_OK
     else:
         analysis = _start_analysis(db, user, repository, runner)
-    return RepositoryDetail.model_validate(
-        {**_base(repository), "latest_analysis": analysis}, from_attributes=True
-    )
+    return _detail(db, repository, analysis)
 
 
 @router.get("", response_model=list[RepositorySummary])
@@ -106,10 +153,7 @@ def list_repositories(
 def get_repository(
     repository: SavedRepository = Depends(get_owned_repository), db: Session = Depends(get_db)
 ) -> RepositoryDetail:
-    analysis = repositories.latest_analysis(db, repository.id)
-    return RepositoryDetail.model_validate(
-        {**_base(repository), "latest_analysis": analysis}, from_attributes=True
-    )
+    return _detail(db, repository, repositories.latest_analysis(db, repository.id))
 
 
 @router.post(
@@ -129,67 +173,4 @@ def start_new_analysis(
             status.HTTP_409_CONFLICT, detail="This repository is already being analyzed"
         )
     analysis = _start_analysis(db, user, repository, runner)
-    return RepositoryDetail.model_validate(
-        {**_base(repository), "latest_analysis": analysis}, from_attributes=True
-    )
-
-
-def _completed_analysis(db: Session, repository: SavedRepository) -> RepositoryAnalysis:
-    analysis = repositories.latest_analysis(db, repository.id)
-    if analysis is None or analysis.status != AnalysisStatus.COMPLETED:
-        raise HTTPException(status.HTTP_409_CONFLICT, detail="The analysis has not finished yet")
-    return analysis
-
-
-@router.get("/{repository_id}/files", response_model=list[FileEntry])
-def list_files(
-    repository: SavedRepository = Depends(get_owned_repository), db: Session = Depends(get_db)
-) -> list[AnalysisFile]:
-    analysis = _completed_analysis(db, repository)
-    return list(
-        db.scalars(
-            select(AnalysisFile)
-            .where(AnalysisFile.analysis_id == analysis.id)
-            .order_by(AnalysisFile.path)
-        )
-    )
-
-
-@router.get("/{repository_id}/files/content", response_model=FileContent)
-def read_file(
-    path: str = Query(min_length=1, max_length=1000),
-    repository: SavedRepository = Depends(get_owned_repository),
-    db: Session = Depends(get_db),
-) -> FileContent:
-    analysis = _completed_analysis(db, repository)
-    # Only paths recorded in the database as stored files are served, so a crafted
-    # path like "../../etc/passwd" never reaches the filesystem lookup.
-    record = db.scalar(
-        select(AnalysisFile).where(
-            AnalysisFile.analysis_id == analysis.id,
-            AnalysisFile.path == path,
-            AnalysisFile.skipped_reason.is_(None),
-        )
-    )
-    data = artifacts.read_source_file(analysis.id, path) if record else None
-    if record is None or data is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="File not found")
-    return FileContent(
-        path=record.path,
-        language=record.language,
-        size_bytes=record.size_bytes,
-        line_count=record.line_count,
-        content=data.decode("utf-8", errors="replace"),
-    )
-
-
-def _base(repository: SavedRepository) -> dict:
-    return {
-        "id": repository.id,
-        "source_type": repository.source_type,
-        "source_url": repository.source_url,
-        "owner": repository.owner,
-        "name": repository.name,
-        "label": repository.label,
-        "created_at": repository.created_at,
-    }
+    return _detail(db, repository, analysis)
