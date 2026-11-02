@@ -2,16 +2,19 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 
 import { buttonClass } from '../ui/button'
-import { useAddRepository } from '../../hooks/useRepositories'
+import { useAddRepository, useUploadZip } from '../../hooks/useRepositories'
+import { ZipPicker } from '../library/RepositoryActions'
 
 export default function AddRepositoryForm() {
   const [url, setUrl] = useState('')
   const add = useAddRepository()
+  const upload = useUploadZip()
   const navigate = useNavigate()
+  const open = (repository: { id: string }) => navigate(`/repositories/${repository.id}`)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    add.mutate(url.trim(), { onSuccess: (repository) => navigate(`/repositories/${repository.id}`) })
+    add.mutate(url.trim(), { onSuccess: open })
   }
 
   return (
@@ -19,7 +22,9 @@ export default function AddRepositoryForm() {
       <h2 id="add-repository-heading" className="font-semibold">
         Analyze a repository
       </h2>
-      <p className="mt-1 text-sm text-muted">Paste the link to a public GitHub repository.</p>
+      <p className="mt-1 text-sm text-muted">
+        Paste the link to a public GitHub repository, or upload a project as a .zip file (up to 50 MB).
+      </p>
 
       <div className="mt-4 flex flex-col gap-3 sm:flex-row">
         <input
@@ -40,9 +45,18 @@ export default function AddRepositoryForm() {
         </button>
       </div>
 
-      {add.isError && (
+      <div className="mt-3 flex items-center gap-3 text-sm text-muted">
+        <span>or</span>
+        <ZipPicker
+          label={upload.isPending ? 'Uploading…' : 'Upload a ZIP'}
+          onPick={(file) => upload.mutate(file, { onSuccess: open })}
+          disabled={upload.isPending}
+        />
+      </div>
+
+      {(add.isError || upload.isError) && (
         <p role="alert" className="mt-3 text-sm text-danger">
-          {add.error.message}
+          {(add.error ?? upload.error)?.message}
         </p>
       )}
     </form>

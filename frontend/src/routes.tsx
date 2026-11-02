@@ -11,6 +11,8 @@ import RepositoryPage from './pages/RepositoryPage'
 import ChatTab from './pages/repository/ChatTab'
 import DependenciesTab from './pages/repository/DependenciesTab'
 import FilesTab from './pages/repository/FilesTab'
+import HistoryTab from './pages/repository/HistoryTab'
+import NotesTab from './pages/repository/NotesTab'
 import OverviewTab from './pages/repository/OverviewTab'
 
 // Kept separate from App so tests can mount the same routes in a memory router.
@@ -39,6 +41,8 @@ export const routes: RouteObject[] = [
               { path: 'files', element: <FilesTab /> },
               { path: 'dependencies', element: <DependenciesTab /> },
               { path: 'chat', element: <ChatTab /> },
+              { path: 'notes', element: <NotesTab /> },
+              { path: 'history', element: <HistoryTab /> },
             ],
           },
         ],

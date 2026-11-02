@@ -10,8 +10,16 @@ const steps: Array<{ status: AnalysisStatus; label: string; detail: string }> = 
   { status: 'analyzing', label: 'Analyzing code', detail: 'Finding functions, classes, dependencies and frameworks.' },
 ]
 
-export default function AnalysisProgress({ status }: { status: AnalysisStatus }) {
-  const current = steps.findIndex((step) => step.status === status)
+export default function AnalysisProgress({
+  status,
+  sourceType = 'github',
+}: {
+  status: AnalysisStatus
+  sourceType?: 'github' | 'zip'
+}) {
+  // Uploaded ZIPs skip the download step.
+  const shown = sourceType === 'zip' ? steps.filter((step) => step.status !== 'fetching') : steps
+  const current = shown.findIndex((step) => step.status === status)
 
   return (
     <section aria-label="Analysis progress" className="rounded-xl border border-line bg-surface p-6">
@@ -19,7 +27,7 @@ export default function AnalysisProgress({ status }: { status: AnalysisStatus })
       <p className="mt-1 text-sm text-muted">This usually takes under a minute. You can leave this page and come back.</p>
 
       <ol className="mt-5 space-y-4" aria-live="polite">
-        {steps.map((step, index) => {
+        {shown.map((step, index) => {
           const done = index < current
           const active = index === current
           return (

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { getHealth } from '../api/health'
+import CollectionsPanel from '../components/library/CollectionsPanel'
 import AddRepositoryForm from '../components/repository/AddRepositoryForm'
 import RepositoryList from '../components/repository/RepositoryList'
 import { useCurrentUser } from '../hooks/useAuth'
@@ -28,7 +29,7 @@ function ServiceStatus() {
   const dbOk = data ? data.database === 'ok' : isPending ? null : false
 
   return (
-    <section aria-labelledby="status-heading" className="self-start rounded-xl border border-line bg-surface p-5">
+    <section aria-labelledby="status-heading" className="rounded-xl border border-line bg-surface p-5">
       <h2 id="status-heading" className="font-semibold">
         Service status
       </h2>
@@ -67,7 +68,10 @@ export default function DashboardPage() {
           </section>
         </div>
 
-        <ServiceStatus />
+        <div className="space-y-6 self-start">
+          <CollectionsPanel />
+          <ServiceStatus />
+        </div>
       </div>
     </div>
   )

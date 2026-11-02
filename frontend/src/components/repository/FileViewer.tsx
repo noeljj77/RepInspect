@@ -7,6 +7,7 @@ import { useFileContent } from '../../hooks/useRepositories'
 import { formatBytes } from '../../lib/format'
 import { fileLink } from '../../lib/links'
 import FileExplanation from '../ai/FileExplanation'
+import FileNotes from '../library/FileNotes'
 import CodeViewer from './CodeViewer'
 
 const KIND_LABELS: Record<string, string> = {
@@ -33,10 +34,12 @@ function Panel({ title, count, children }: { title: string; count: number; child
 function Insights({
   repositoryId,
   file,
+  line,
   onSelectLine,
 }: {
   repositoryId: string
   file: FileContent
+  line: number | null
   onSelectLine: (line: number) => void
 }) {
   return (
@@ -101,6 +104,7 @@ function Insights({
           ))}
         </ul>
       </Panel>
+      <FileNotes repositoryId={repositoryId} path={file.path} line={line} />
     </aside>
   )
 }
@@ -157,7 +161,7 @@ export default function FileViewer({ repositoryId, path, line, onSelectLine }: P
         <div className="min-w-0">
           <CodeViewer content={file.content} highlightLine={line} onSelectLine={onSelectLine} />
         </div>
-        <Insights repositoryId={repositoryId} file={file} onSelectLine={onSelectLine} />
+        <Insights repositoryId={repositoryId} file={file} line={line} onSelectLine={onSelectLine} />
       </div>
     </div>
   )

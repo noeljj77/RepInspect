@@ -110,7 +110,7 @@ function DeleteButton({ onDelete, busy }: { onDelete: () => void; busy: boolean 
     return (
       <button type="button" onClick={() => setConfirming(true)} className={buttonClass('ghost', 'h-8 px-2 text-xs')}>
         <Trash2 size={13} aria-hidden="true" />
-        Delete
+        Delete conversation
       </button>
     )
   }
