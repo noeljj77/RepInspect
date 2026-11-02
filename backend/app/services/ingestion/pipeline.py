@@ -2,6 +2,7 @@
 
     queued → fetching (GitHub API + download) → extracting (unpack, filter, store)
            → analyzing (parse code, dependencies, frameworks) → completed
+    then, in the same job: build the search index used by chat (services/rag/indexer.py)
 
 Any failure ends in `failed` with a user-readable message. Repository code is only
 ever read as text; nothing from it is executed.
@@ -37,6 +38,7 @@ from app.services.analysis.runner import AnalysisOutput, SourceFile, analyze_dir
 from app.services.ingestion.archive import ExtractionLimits, ExtractionResult, extract_tar_gz
 from app.services.ingestion.errors import IngestionError, RepositoryEmpty
 from app.services.ingestion.github_client import GitHubClient
+from app.services.rag import indexer
 from app.storage import artifacts
 
 logger = logging.getLogger(__name__)
@@ -71,9 +73,15 @@ def run_github_analysis(analysis_id: uuid.UUID) -> None:
             _import_repository(db, analysis, repository)
         except IngestionError as error:
             _mark_failed(db, analysis_id, error.code, error.message)
+            return
         except Exception:
             logger.exception("Analysis %s failed unexpectedly", analysis_id)
             _mark_failed(db, analysis_id, "internal_error", GENERIC_FAILURE)
+            return
+        # The analysis can already be used. Chat's search index is built next, in this
+        # same job, and has its own status.
+        indexer.request_index(db, analysis_id)
+    indexer.run_index_job(analysis_id)
 
 
 def _import_repository(

@@ -1,6 +1,7 @@
-"""Where large analysis outputs live on disk (source snapshots now, search indexes later).
+"""Where large analysis outputs live on disk: source snapshots and search indexes.
 
 Layout:  <artifact_dir>/<analysis id>/source/<repo files...>
+         <artifact_dir>/<analysis id>/index/vectors.faiss
 
 Postgres stores the records; the bytes live here, behind this small interface so the
 storage backend can change (for example to S3) without touching callers.
@@ -25,6 +26,10 @@ def staging_dir(analysis_id: uuid.UUID) -> Path:
 
 def source_dir(analysis_id: uuid.UUID) -> Path:
     return _analysis_dir(analysis_id) / "source"
+
+
+def index_dir(analysis_id: uuid.UUID) -> Path:
+    return _analysis_dir(analysis_id) / "index"
 
 
 def publish_staging(analysis_id: uuid.UUID) -> None:
