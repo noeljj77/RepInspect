@@ -7,6 +7,7 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RegisterPage from './pages/RegisterPage'
+import RepositoryPage from './pages/RepositoryPage'
 
 // Kept separate from App so tests can mount the same routes in a memory router.
 export const routes: RouteObject[] = [
@@ -24,7 +25,10 @@ export const routes: RouteObject[] = [
     children: [
       {
         element: <AppLayout />,
-        children: [{ path: '/dashboard', element: <DashboardPage /> }],
+        children: [
+          { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/repositories/:repositoryId', element: <RepositoryPage /> },
+        ],
       },
     ],
   },

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { FolderGit2 } from 'lucide-react'
 
 import { getHealth } from '../api/health'
+import AddRepositoryForm from '../components/repository/AddRepositoryForm'
+import RepositoryList from '../components/repository/RepositoryList'
 import { useCurrentUser } from '../hooks/useAuth'
 import { cn } from '../lib/cn'
 
@@ -27,7 +28,7 @@ function ServiceStatus() {
   const dbOk = data ? data.database === 'ok' : isPending ? null : false
 
   return (
-    <section aria-labelledby="status-heading" className="rounded-xl border border-line bg-surface p-5">
+    <section aria-labelledby="status-heading" className="self-start rounded-xl border border-line bg-surface p-5">
       <h2 id="status-heading" className="font-semibold">
         Service status
       </h2>
@@ -50,17 +51,21 @@ export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <h1 className="text-3xl font-semibold tracking-tight">Welcome, {user?.display_name}</h1>
-      <p className="mt-2 text-muted">Your saved repositories and interview practice will appear here.</p>
+      <p className="mt-2 text-muted">Analyze a repository, then explore it and prepare to talk about it.</p>
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
-        <section className="flex flex-col items-start rounded-xl border border-dashed border-line px-6 py-10 sm:px-8">
-          <FolderGit2 size={28} strokeWidth={1.5} className="text-faint" aria-hidden="true" />
-          <h2 className="mt-4 text-lg font-semibold">No repositories yet</h2>
-          <p className="mt-1.5 max-w-md text-muted">
-            Repository analysis isn't available yet. Once it is, repositories you add will be listed here with
-            their analysis and interview progress.
-          </p>
-        </section>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_18rem]">
+        <div className="min-w-0 space-y-10">
+          <section className="rounded-xl border border-line bg-surface p-5">
+            <AddRepositoryForm />
+          </section>
+
+          <section aria-labelledby="library-heading">
+            <h2 id="library-heading" className="mb-4 font-semibold">
+              Your repositories
+            </h2>
+            <RepositoryList />
+          </section>
+        </div>
 
         <ServiceStatus />
       </div>
