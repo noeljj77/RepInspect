@@ -108,7 +108,10 @@ def test_me_requires_login(client):
 
 def test_me_rejects_a_tampered_cookie(client):
     register(client)
-    client.cookies.set(COOKIE, client.cookies[COOKIE][:-3] + "abc", path="/api")
+    tampered = client.cookies[COOKIE][:-3] + "abc"
+    # Replace the cookie: setting it again could keep the real one next to it.
+    client.cookies.clear()
+    client.cookies.set(COOKIE, tampered, path="/api")
 
     assert client.get("/api/auth/me").status_code == 401
 
