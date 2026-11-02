@@ -61,6 +61,23 @@ class Settings(BaseSettings):
     analysis_workers: int = Field(default=2, gt=0)
     max_active_analyses_per_user: int = Field(default=3, gt=0)
 
+    # --- AI explanations ---------------------------------------------------
+    # The provider is chosen here so another one can be added without touching the
+    # features that use it. "none" switches the AI features off.
+    llm_provider: Literal["gemini", "none"] = "gemini"
+    gemini_api_key: SecretStr | None = None
+    llm_model: str = "gemini-3.5-flash-lite"
+    llm_timeout_seconds: float = Field(default=90.0, gt=0)
+    # Attempts per request, counting the first. Covers temporary errors such as
+    # "model is busy" (503), which the free tier returns during demand spikes.
+    llm_max_attempts: int = Field(default=3, ge=1, le=6)
+    # How much repository material goes into one prompt (characters, roughly 4 per token).
+    # Whole repositories are never sent: only a selection of facts and excerpts.
+    ai_context_chars: int = Field(default=60_000, ge=5_000)
+    # Free tiers have small quotas, so each person gets a daily allowance.
+    max_ai_requests_per_user_per_day: int = Field(default=40, gt=0)
+    max_active_ai_jobs_per_user: int = Field(default=2, gt=0)
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def split_origins(cls, value: object) -> object:
@@ -75,6 +92,17 @@ class Settings(BaseSettings):
         ):
             raise ValueError("JWT_SECRET is still the development placeholder")
         return self
+
+    @property
+    def gemini_key(self) -> str | None:
+        """The Gemini key, or None when it is unset or blank (GEMINI_API_KEY= in .env)."""
+        if self.gemini_api_key is None:
+            return None
+        return self.gemini_api_key.get_secret_value().strip() or None
+
+    @property
+    def llm_configured(self) -> bool:
+        return self.llm_provider == "gemini" and self.gemini_key is not None
 
     @property
     def cookie_secure(self) -> bool:
