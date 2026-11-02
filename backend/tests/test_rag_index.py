@@ -205,7 +205,7 @@ def test_an_index_made_with_another_model_is_not_used(repo, monkeypatch):
 
 def test_a_missing_index_file_is_reported(repo):
     artifacts.remove_analysis(analysis_id(repo))
-    vector_store._forget(analysis_id(repo))
+    vector_store.forget(analysis_id(repo))
 
     with pytest.raises(vector_store.IndexMissing):
         search(repo, "password")

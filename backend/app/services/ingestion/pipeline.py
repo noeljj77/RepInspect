@@ -1,8 +1,12 @@
-"""The background job that imports one GitHub repository.
+"""The background job that imports one repository, from GitHub or an uploaded ZIP.
 
-    queued → fetching (GitHub API + download) → extracting (unpack, filter, store)
-           → analyzing (parse code, dependencies, frameworks) → completed
-    then, in the same job: build the search index used by chat (services/rag/indexer.py)
+    GitHub:  queued → fetching (GitHub API + download) → extracting → analyzing → completed
+    ZIP:     queued → extracting (the uploaded file)                → analyzing → completed
+
+    extracting: unpack, filter, redact and store the files
+    analyzing:  parse code, read dependencies, detect frameworks
+    then, in the same job: build the search index used by chat (services/rag/indexer.py),
+    and tidy up older versions of the same repository (see prune_old_versions)
 
 Any failure ends in `failed` with a user-readable message. Repository code is only
 ever read as text; nothing from it is executed.
@@ -19,7 +23,7 @@ from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 
-from sqlalchemy import delete, insert
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
@@ -28,17 +32,24 @@ from app.db.session import SessionLocal
 from app.models import (
     AnalysisFile,
     AnalysisStatus,
+    CodeChunk,
     CodeImport,
     CodeSymbol,
     ProjectDependency,
     RepositoryAnalysis,
     SavedRepository,
+    SearchIndex,
 )
 from app.services.analysis.runner import AnalysisOutput, SourceFile, analyze_directory
-from app.services.ingestion.archive import ExtractionLimits, ExtractionResult, extract_tar_gz
+from app.services.ingestion.archive import (
+    ExtractionLimits,
+    ExtractionResult,
+    extract_tar_gz,
+    extract_zip,
+)
 from app.services.ingestion.errors import IngestionError, RepositoryEmpty
 from app.services.ingestion.github_client import GitHubClient
-from app.services.rag import indexer
+from app.services.rag import indexer, vector_store
 from app.storage import artifacts
 
 logger = logging.getLogger(__name__)
@@ -63,14 +74,17 @@ def create_github_client() -> GitHubClient:
     return GitHubClient.from_settings()
 
 
-def run_github_analysis(analysis_id: uuid.UUID) -> None:
+def run_analysis(analysis_id: uuid.UUID) -> None:
     with SessionLocal() as db:
         analysis = db.get(RepositoryAnalysis, analysis_id)
         if analysis is None or analysis.status != AnalysisStatus.QUEUED:
             return  # already handled, or deleted in the meantime
         repository = db.get(SavedRepository, analysis.saved_repository_id)
         try:
-            _import_repository(db, analysis, repository)
+            if repository.source_type == "zip":
+                _import_upload(db, analysis)
+            else:
+                _import_repository(db, analysis, repository)
         except IngestionError as error:
             _mark_failed(db, analysis_id, error.code, error.message)
             return
@@ -78,10 +92,43 @@ def run_github_analysis(analysis_id: uuid.UUID) -> None:
             logger.exception("Analysis %s failed unexpectedly", analysis_id)
             _mark_failed(db, analysis_id, "internal_error", GENERIC_FAILURE)
             return
+        finally:
+            artifacts.remove_upload(analysis_id)  # extracted, or not needed after a failure
+        prune_old_versions(db, repository.id, keep=analysis_id)
         # The analysis can already be used. Chat's search index is built next, in this
         # same job, and has its own status.
         indexer.request_index(db, analysis_id)
     indexer.run_index_job(analysis_id)
+
+
+def prune_old_versions(db: Session, repository_id: uuid.UUID, keep: uuid.UUID) -> None:
+    """Free the space older versions take, once a newer one has finished.
+
+    The page only shows the latest version, so older source snapshots, search indexes and
+    code chunks are dead weight (a snapshot can be 100 MB). Their analysis rows and file
+    lists stay: refresh history compares versions with them.
+    """
+    older = list(
+        db.scalars(
+            select(RepositoryAnalysis.id).where(
+                RepositoryAnalysis.saved_repository_id == repository_id,
+                RepositoryAnalysis.id != keep,
+            )
+        )
+    )
+    if not older:
+        return
+    db.execute(delete(CodeChunk).where(CodeChunk.analysis_id.in_(older)))
+    db.execute(delete(SearchIndex).where(SearchIndex.analysis_id.in_(older)))
+    db.execute(
+        update(RepositoryAnalysis)
+        .where(RepositoryAnalysis.id.in_(older))
+        .values(source_removed=True)
+    )
+    db.commit()
+    for analysis_id in older:
+        artifacts.remove_analysis(analysis_id)
+        vector_store.forget(analysis_id)
 
 
 def _import_repository(
@@ -122,6 +169,35 @@ def _import_repository(
         with _timed(timings, "extract"):
             result = extract_tar_gz(archive_path, staging, ExtractionLimits.from_settings(settings))
 
+    _analyze_and_store(db, analysis, staging, result, timings)
+
+
+def _import_upload(db: Session, analysis: RepositoryAnalysis) -> None:
+    """Analyze the ZIP file the person uploaded (stored by the upload endpoint)."""
+    settings = get_settings()
+    timings: dict[str, float] = {}
+    upload = artifacts.upload_path(analysis.id)
+
+    analysis.status = AnalysisStatus.EXTRACTING
+    analysis.started_at = datetime.now(UTC)
+    db.commit()
+    if not upload.is_file():
+        raise IngestionError("The uploaded file is no longer available. Upload it again.")
+
+    staging = artifacts.staging_dir(analysis.id)
+    artifacts.remove_staging(analysis.id)  # clear leftovers from a crashed earlier run
+    with _timed(timings, "extract"):
+        result = extract_zip(upload, staging, ExtractionLimits.from_settings(settings))
+    _analyze_and_store(db, analysis, staging, result, timings)
+
+
+def _analyze_and_store(
+    db: Session,
+    analysis: RepositoryAnalysis,
+    staging: Path,
+    result: ExtractionResult,
+    timings: dict[str, float],
+) -> None:
     if result.kept_count == 0:
         raise RepositoryEmpty("This repository has no readable source files to analyze.")
 
@@ -207,6 +283,7 @@ def _store_results(
                 "importance_reasons": (found.importance_reasons or None) if found else None,
                 "symbol_count": len(parsed.symbols) if parsed else 0,
                 "parse_error": parsed.parse_error if parsed else False,
+                "content_hash": f.content_hash,
             }
         )
     _insert_all(db, AnalysisFile, file_rows)  # files first: later rows point at them

@@ -2,6 +2,7 @@
 
 Layout:  <artifact_dir>/<analysis id>/source/<repo files...>
          <artifact_dir>/<analysis id>/index/vectors.faiss
+         <artifact_dir>/uploads/<analysis id>.zip     (an uploaded ZIP until it is extracted)
 
 Postgres stores the records; the bytes live here, behind this small interface so the
 storage backend can change (for example to S3) without touching callers.
@@ -35,6 +36,22 @@ def index_dir(analysis_id: uuid.UUID) -> Path:
 def publish_staging(analysis_id: uuid.UUID) -> None:
     """Make a finished import visible. The rename is atomic: no half-written snapshots."""
     os.replace(staging_dir(analysis_id), source_dir(analysis_id))
+
+
+def upload_dir() -> Path:
+    return get_settings().artifact_dir / "uploads"
+
+
+def upload_path(analysis_id: uuid.UUID) -> Path:
+    return upload_dir() / f"{analysis_id}.zip"
+
+
+def remove_upload(analysis_id: uuid.UUID) -> None:
+    upload_path(analysis_id).unlink(missing_ok=True)
+
+
+def remove_staging(analysis_id: uuid.UUID) -> None:
+    shutil.rmtree(staging_dir(analysis_id), ignore_errors=True)
 
 
 def remove_analysis(analysis_id: uuid.UUID) -> None:

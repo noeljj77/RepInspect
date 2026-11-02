@@ -53,14 +53,14 @@ def save(analysis_id: uuid.UUID, index: faiss.Index, model: str) -> None:
     os.replace(partial, folder / INDEX_FILE)  # atomic: readers never see half a file
     meta = {"model": model, "dimension": index.d, "count": index.ntotal}
     (folder / META_FILE).write_text(json.dumps(meta), encoding="utf-8")
-    _forget(analysis_id)
+    forget(analysis_id)
 
 
 _cache: OrderedDict[uuid.UUID, StoredIndex] = OrderedDict()
 _cache_lock = threading.Lock()
 
 
-def _forget(analysis_id: uuid.UUID) -> None:
+def forget(analysis_id: uuid.UUID) -> None:
     with _cache_lock:
         _cache.pop(analysis_id, None)
 
