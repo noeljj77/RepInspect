@@ -1,3 +1,7 @@
+import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -5,6 +9,22 @@ from app import __version__
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.db.session import SessionLocal
+from app.services import repositories
+from app.worker.runner import get_job_runner
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    # Jobs that were running when the previous process stopped will never finish.
+    with SessionLocal() as db:
+        interrupted = repositories.mark_interrupted(db)
+    if interrupted:
+        logger.warning("Marked %d interrupted analyses as failed", interrupted)
+    yield
+    get_job_runner().shutdown()
 
 
 def create_app() -> FastAPI:
@@ -14,6 +34,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.app_name,
         version=__version__,
+        lifespan=lifespan,
         # Interactive docs are handy locally but should not be public in production.
         docs_url="/api/docs" if settings.app_env != "production" else None,
         redoc_url=None,
