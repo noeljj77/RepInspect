@@ -1,23 +1,29 @@
 import { Link } from 'react-router'
 
 import type { Citation, Finding } from '../../api/ai'
-import { fileLink } from '../../lib/links'
-
-function lineRange({ start_line, end_line }: Citation): string {
-  return end_line > start_line ? `${start_line}–${end_line}` : String(start_line)
-}
+import { citationPlace, fileLink } from '../../lib/links'
 
 /** A confirmed quote from the repository, linking to the exact lines. */
-function CitationLink({ repositoryId, citation }: { repositoryId: string; citation: Citation }) {
+export function CitationLink({
+  repositoryId,
+  citation,
+  label,
+}: {
+  repositoryId: string
+  citation: Citation
+  /** Shown before the location, e.g. "[2]" to match a marker in an answer. */
+  label?: string
+}) {
   return (
     <Link
       to={fileLink(repositoryId, citation.path, citation.start_line)}
-      className="group block rounded-md border border-mark/20 bg-mark/[0.07] px-2.5 py-1.5 hover:border-mark/50"
+      className="group block min-w-0 rounded-md border border-mark/20 bg-mark/[0.07] px-2.5 py-1.5 hover:border-mark/50"
     >
-      <span className="block font-mono text-[12px] text-mark group-hover:underline">
-        {citation.path}:{lineRange(citation)}
+      <span className="block font-mono text-[12px] wrap-anywhere text-mark group-hover:underline">
+        {label && <span className="mr-1.5 text-mark/70">{label}</span>}
+        {citationPlace(citation)}
       </span>
-      <code className="mt-0.5 block font-mono text-[12.5px] leading-5 whitespace-pre-wrap text-ink/85">
+      <code className="mt-0.5 block font-mono text-[12.5px] leading-5 whitespace-pre-wrap wrap-anywhere text-ink/85">
         {citation.quote}
       </code>
     </Link>

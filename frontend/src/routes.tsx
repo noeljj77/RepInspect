@@ -8,6 +8,7 @@ import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RegisterPage from './pages/RegisterPage'
 import RepositoryPage from './pages/RepositoryPage'
+import ChatTab from './pages/repository/ChatTab'
 import DependenciesTab from './pages/repository/DependenciesTab'
 import FilesTab from './pages/repository/FilesTab'
 import OverviewTab from './pages/repository/OverviewTab'
@@ -37,6 +38,7 @@ export const routes: RouteObject[] = [
               { index: true, element: <OverviewTab /> },
               { path: 'files', element: <FilesTab /> },
               { path: 'dependencies', element: <DependenciesTab /> },
+              { path: 'chat', element: <ChatTab /> },
             ],
           },
         ],
