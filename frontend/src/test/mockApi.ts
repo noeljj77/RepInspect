@@ -40,11 +40,17 @@ function aiNotRequested(key: string): Reply | undefined {
   }
 }
 
+/** Pages also load collections and notes. Unless a test lists them, there are none. */
+function emptyLibrary(key: string): Reply | undefined {
+  if (key === 'GET /api/collections' || /^GET \/api\/repositories\/[^/]+\/notes$/.test(key)) return { body: [] }
+  return undefined
+}
+
 /** Replace fetch with a fake that answers from a route table. Returns the mock for assertions. */
 export function mockApi(routes: ApiRoutes) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const key = `${init?.method ?? 'GET'} ${String(input)}`
-    const handler = routes[key] ?? aiNotRequested(key)
+    const handler = routes[key] ?? aiNotRequested(key) ?? emptyLibrary(key)
     if (!handler) throw new Error(`Unexpected request: ${key}`)
     if (handler === 'network-error') throw new TypeError('Failed to fetch')
 

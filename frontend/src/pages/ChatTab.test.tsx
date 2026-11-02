@@ -215,7 +215,7 @@ describe('Chat tab: answers', () => {
       'page',
     )
 
-    await user.click(await screen.findByRole('button', { name: 'Delete' }))
+    await user.click(await screen.findByRole('button', { name: 'Delete conversation' }))
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false)
     await user.click(screen.getByRole('button', { name: 'Delete this conversation' }))
 

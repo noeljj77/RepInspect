@@ -32,6 +32,7 @@ export function analysis(overrides: Partial<AnalysisDetail> = {}): AnalysisDetai
     skipped_summary: null,
     redaction_count: 0,
     truncated: false,
+    source_removed: false,
     created_at: '2026-11-02T10:00:00Z',
     completed_at: '2026-11-02T10:00:20Z',
     github_metadata: {
@@ -95,15 +96,19 @@ export function repositoryDetail(
   analysisOverrides: Partial<AnalysisDetail> | null = {},
   overrides: Partial<RepositoryDetail> = {},
 ): RepositoryDetail {
+  const latest = analysisOverrides === null ? null : analysis(analysisOverrides)
   return {
     id: REPO_ID,
     source_type: 'github',
     source_url: 'https://github.com/pallets/flask',
     owner: 'pallets',
     name: 'flask',
-    label: null,
+    labels: [],
+    collection_ids: [],
     created_at: '2026-11-02T10:00:00Z',
-    latest_analysis: analysisOverrides === null ? null : analysis(analysisOverrides),
+    latest_analysis: latest,
+    // As on the server: the newest finished version.
+    current_analysis: latest?.status === 'completed' ? latest : null,
     important_files: [
       { path: 'README.md', language: 'Markdown', score: 50, reasons: ['Project README'] },
       {
@@ -193,6 +198,7 @@ export function analysisSummary(overrides: Partial<AnalysisSummary> = {}): Analy
     error_code: full.error_code,
     error_message: full.error_message,
     commit_sha: full.commit_sha,
+    source_removed: full.source_removed,
     file_count: full.file_count,
     total_bytes: full.total_bytes,
     skipped_summary: full.skipped_summary,
@@ -211,7 +217,8 @@ export function repositorySummary(overrides: Partial<RepositorySummary> = {}): R
     source_url: 'https://github.com/pallets/flask',
     owner: 'pallets',
     name: 'flask',
-    label: null,
+    labels: [],
+    collection_ids: [],
     description: 'The Python micro framework',
     created_at: '2026-11-02T10:00:00Z',
     latest_analysis: analysisSummary(),
