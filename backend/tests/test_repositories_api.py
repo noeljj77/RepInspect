@@ -472,13 +472,13 @@ def test_file_content_is_served_from_storage(github, user):
     response = user.get(f"/api/repositories/{repo['id']}/files/content", params={"path": "app.py"})
 
     assert response.status_code == 200
-    assert response.json() == {
-        "path": "app.py",
-        "language": "Python",
-        "size_bytes": 25,
-        "line_count": 2,
-        "content": "def main():\n    return 1\n",
-    }
+    body = response.json()
+    assert body["path"] == "app.py"
+    assert body["language"] == "Python"
+    assert body["size_bytes"] == 25
+    assert body["line_count"] == 2
+    assert body["content"] == "def main():\n    return 1\n"
+    assert [(s["qualified_name"], s["kind"]) for s in body["symbols"]] == [("main", "function")]
 
 
 @pytest.mark.parametrize(
