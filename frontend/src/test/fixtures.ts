@@ -1,4 +1,12 @@
 import type {
+  AiKind,
+  ContentByKind,
+  Explanation,
+  FileExplanationContent,
+  OverviewContent,
+  TechnologiesContent,
+} from '../api/ai'
+import type {
   AnalysisDetail,
   AnalysisSummary,
   Dependency,
@@ -207,5 +215,97 @@ export function repositorySummary(overrides: Partial<RepositorySummary> = {}): R
     created_at: '2026-11-02T10:00:00Z',
     latest_analysis: analysisSummary(),
     ...overrides,
+  }
+}
+
+export function explanation<K extends AiKind>(
+  kind: K,
+  content: ContentByKind[K] | null,
+  overrides: Partial<Explanation<K>> = {},
+): Explanation<K> {
+  return {
+    id: '44444444-4444-4444-4444-444444444444',
+    kind,
+    path: null,
+    status: content ? 'completed' : 'pending',
+    error_code: null,
+    error_message: null,
+    content,
+    model: 'gemini-test',
+    created_at: '2026-11-02T10:01:00Z',
+    completed_at: content ? '2026-11-02T10:01:10Z' : null,
+    ...overrides,
+  }
+}
+
+export function overviewContent(): OverviewContent {
+  return {
+    removed_citations: 1,
+    sections: [
+      {
+        key: 'purpose',
+        title: 'What the project does',
+        summary: 'Flask is a small framework for web applications.',
+        determined: true,
+        ungrounded_paths: [],
+        findings: [
+          {
+            statement: 'The application object is the Flask class.',
+            verified: true,
+            ungrounded_paths: [],
+            citations: [{ path: 'src/flask/app.py', start_line: 5, end_line: 5, quote: 'class Flask:' }],
+          },
+          {
+            statement: 'It is probably used for small services.',
+            verified: false,
+            ungrounded_paths: ['server/main.py'],
+            citations: [],
+          },
+        ],
+      },
+      {
+        key: 'frontend',
+        title: 'Frontend structure',
+        summary: '',
+        determined: false,
+        ungrounded_paths: [],
+        findings: [],
+      },
+    ],
+  }
+}
+
+export function technologiesContent(): TechnologiesContent {
+  return {
+    technologies: [
+      {
+        name: 'flask',
+        what_it_is: 'A lightweight Python web framework.',
+        plausible_reason: 'It keeps small apps simple.',
+        advantages: ['Small core'],
+        alternatives: ['Django', 'FastAPI'],
+        trade_offs: ['Fewer built-in features'],
+      },
+    ],
+  }
+}
+
+export function fileExplanationContent(): FileExplanationContent {
+  return {
+    purpose: 'Defines the central application class.',
+    determined: true,
+    inputs_outputs: 'Takes configuration, serves requests.',
+    findings: [],
+    key_symbols: [
+      {
+        name: 'Flask',
+        qualified_name: 'Flask',
+        kind: 'class',
+        start_line: 5,
+        explanation: 'The application object.',
+      },
+    ],
+    ungrounded_paths: [],
+    removed_citations: 0,
   }
 }
