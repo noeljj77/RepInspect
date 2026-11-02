@@ -4,6 +4,7 @@ from app.db.base import Base
 from app.models.ai_explanation import AiExplanation, AiKind, AiStatus
 from app.models.ai_request import AiRequest
 from app.models.analysis_file import AnalysisFile
+from app.models.chat import ChatMessage, ChatSession, MessageStatus
 from app.models.code_analysis import CodeImport, CodeSymbol, ProjectDependency
 from app.models.repository_analysis import (
     IN_PROGRESS_STATUSES,
@@ -11,6 +12,7 @@ from app.models.repository_analysis import (
     RepositoryAnalysis,
 )
 from app.models.saved_repository import SavedRepository
+from app.models.search import CodeChunk, IndexStatus, SearchIndex
 from app.models.user import User
 
 __all__ = [
@@ -22,10 +24,16 @@ __all__ = [
     "AnalysisFile",
     "AnalysisStatus",
     "Base",
+    "ChatMessage",
+    "ChatSession",
+    "CodeChunk",
     "CodeImport",
     "CodeSymbol",
+    "IndexStatus",
+    "MessageStatus",
     "ProjectDependency",
     "RepositoryAnalysis",
     "SavedRepository",
+    "SearchIndex",
     "User",
 ]
