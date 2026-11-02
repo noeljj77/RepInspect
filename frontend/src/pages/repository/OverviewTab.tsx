@@ -1,11 +1,15 @@
 import { GitFork, Star } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import type { Technology } from '../../api/repositories'
+import AiOverview from '../../components/ai/AiOverview'
+import ExplanationPanel from '../../components/ai/ExplanationPanel'
 import ImportantFiles from '../../components/repository/ImportantFiles'
 import ImportSummary from '../../components/repository/ImportSummary'
 import LanguageBar from '../../components/repository/LanguageBar'
 import StatsGrid from '../../components/repository/StatsGrid'
 import TechnologyList from '../../components/repository/TechnologyList'
+import { useAiExplanation } from '../../hooks/useAiExplanation'
 import { useRepositoryContext } from '../../hooks/useRepositoryContext'
 import { formatCount, formatDate, formatRelativeTime } from '../../lib/format'
 
@@ -26,6 +30,38 @@ function Card({ id, title, children }: { id: string; title: string; children: Re
       </h2>
       {children}
     </section>
+  )
+}
+
+function TechnologiesCard({ repositoryId, technologies }: { repositoryId: string; technologies: Technology[] }) {
+  const { data } = useAiExplanation(repositoryId, 'technologies')
+  const explanations = data?.status === 'completed' ? data.content?.technologies : undefined
+
+  return (
+    <Card id="technologies-heading" title="Frameworks and libraries">
+      <TechnologyList technologies={technologies} repositoryId={repositoryId} explanations={explanations} />
+      {technologies.length > 0 && (
+        <div className="mt-5 border-t border-line pt-4">
+          <ExplanationPanel
+            repositoryId={repositoryId}
+            kind="technologies"
+            actionLabel="Explain these technologies"
+            intro={
+              <p>
+                Get a short description of each one, its strengths, alternatives and trade-offs. This is general
+                knowledge, shown separately from the evidence found in the code.
+              </p>
+            }
+          >
+            {() => (
+              <p className="text-sm text-muted">
+                Open a technology above to read what it is, why it might be used and what else could do the job.
+              </p>
+            )}
+          </ExplanationPanel>
+        </div>
+      )}
+    </Card>
   )
 }
 
@@ -75,6 +111,8 @@ export default function OverviewTab() {
         </section>
       )}
 
+      <AiOverview repositoryId={repository.id} />
+
       {languages && Object.keys(languages).length > 0 && (
         <Card id="languages-heading" title={stats ? 'Languages, by lines of code' : 'Languages'}>
           <LanguageBar languages={languages} />
@@ -91,9 +129,7 @@ export default function OverviewTab() {
       )}
 
       {analysis.technologies && (
-        <Card id="technologies-heading" title="Frameworks and libraries">
-          <TechnologyList technologies={analysis.technologies} repositoryId={repository.id} />
-        </Card>
+        <TechnologiesCard repositoryId={repository.id} technologies={analysis.technologies} />
       )}
 
       {analysis.technologies && (

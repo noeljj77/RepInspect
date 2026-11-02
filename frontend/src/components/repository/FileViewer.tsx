@@ -6,6 +6,7 @@ import type { FileContent } from '../../api/repositories'
 import { useFileContent } from '../../hooks/useRepositories'
 import { formatBytes } from '../../lib/format'
 import { fileLink } from '../../lib/links'
+import FileExplanation from '../ai/FileExplanation'
 import CodeViewer from './CodeViewer'
 
 const KIND_LABELS: Record<string, string> = {
@@ -148,6 +149,9 @@ export default function FileViewer({ repositoryId, path, line, onSelectLine }: P
           </p>
         )}
       </header>
+
+      {/* Keyed by path so a half-finished request for one file never shows on another. */}
+      <FileExplanation key={file.path} repositoryId={repositoryId} path={file.path} onSelectLine={onSelectLine} />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_17rem]">
         <div className="min-w-0">
