@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { FolderGit2 } from 'lucide-react'
 
 import { getHealth } from '../api/health'
+import { useCurrentUser } from '../hooks/useAuth'
 import { cn } from '../lib/cn'
 
 function StatusRow({ label, ok, value }: { label: string; ok: boolean | null; value: string }) {
@@ -44,9 +45,11 @@ function ServiceStatus() {
 }
 
 export default function DashboardPage() {
+  const { data: user } = useCurrentUser()
+
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Welcome, {user?.display_name}</h1>
       <p className="mt-2 text-muted">Your saved repositories and interview practice will appear here.</p>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">

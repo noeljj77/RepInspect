@@ -5,6 +5,7 @@ import QuestionPreview from '../components/landing/QuestionPreview'
 import PublicHeader from '../components/layout/PublicHeader'
 import { buttonClass } from '../components/ui/button'
 import { LogoMark } from '../components/ui/Logo'
+import { useCurrentUser } from '../hooks/useAuth'
 
 const steps = [
   {
@@ -22,6 +23,8 @@ const steps = [
 ]
 
 export default function LandingPage() {
+  const { data: user } = useCurrentUser()
+
   return (
     <div className="min-h-dvh">
       <PublicHeader />
@@ -37,8 +40,11 @@ export default function LandingPage() {
               the exact files and lines. Then it turns that code into interview practice.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/dashboard" className={buttonClass('primary', 'h-11 px-5 text-[15px]')}>
-                Analyze a repository
+              <Link
+                to={user ? '/dashboard' : '/register'}
+                className={buttonClass('primary', 'h-11 px-5 text-[15px]')}
+              >
+                {user ? 'Open dashboard' : 'Create an account'}
               </Link>
               <a href="#how-it-works" className={buttonClass('secondary', 'h-11 px-5 text-[15px]')}>
                 See how it works
