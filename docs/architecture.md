@@ -43,7 +43,7 @@ Repository code is never executed.
 | Path | Responsibility |
 |---|---|
 | `app/main.py` | App factory: middleware, routers |
-| `app/core/` | Settings, logging, security helpers |
+| `app/core/` | Settings, logging, password hashing and tokens (`security.py`) |
 | `app/db/` | Engine, session, declarative base with constraint naming convention |
 | `app/models/` | SQLAlchemy models |
 | `app/schemas/` | Pydantic request and response models |
@@ -69,6 +69,8 @@ later migrations.
 |---|---|
 | `src/routes.tsx` | Route table, shared by the app and tests |
 | `src/api/` | `apiFetch` wrapper and typed calls per backend area |
+| `src/hooks/` | Shared hooks, such as `useCurrentUser` |
+| `src/components/auth/` | Route guards and the login/register page shell |
 | `src/components/ui/` | Small shared pieces (button styles, logo) |
 | `src/components/layout/` | Public header and authenticated app shell |
 | `src/pages/` | One component per route |
@@ -82,6 +84,36 @@ The accent colour (amber, `--color-mark`) means "taken from the repository": hig
 lines, citations and the primary action. Periwinkle (`--color-hint`) marks AI suggestions
 that are not backed by the code. Keeping that split consistent lets users tell verified
 findings from generated advice at a glance.
+
+## Authentication
+
+```
+register / login ──► service checks credentials ──► JWT signed with JWT_SECRET
+                                                     │
+                     Set-Cookie: repinspect_session (HttpOnly, SameSite=Lax, Path=/api, Secure in production)
+                                                     │
+every later request ─► cookie ─► get_current_user dependency ─► User row, or 401
+```
+
+| Decision | Reason |
+|---|---|
+| Argon2id via `argon2-cffi` (library defaults) | Memory-hard, current OWASP and RFC 9106 recommendation. The hash string embeds its parameters and salt. Hashes are upgraded on login when the defaults get stronger. |
+| Token in an `HttpOnly` cookie, not `localStorage` | JavaScript cannot read it, so an XSS bug cannot steal the session. |
+| `SameSite=Lax`, JSON-only POSTs | Browsers do not send the cookie on cross-site POSTs, which blocks CSRF without extra tokens. |
+| Cookie `Path=/api` | The cookie is only attached to API calls, never to requests for the web app itself. |
+| JWT algorithm pinned to HS256, `exp` and `sub` required | Blocks `alg: none` and algorithm-confusion attacks. |
+| Same 401 message and a dummy hash check for unknown emails | Login responses and timing do not reveal which emails are registered. |
+| App refuses to start without a 32+ character `JWT_SECRET`, and rejects the development placeholder in production | A guessable signing key would let anyone forge logins. |
+| Email lowercased on write, unique constraint in the database | `Ada@x.com` and `ada@x.com` are one account, and concurrent sign-ups cannot create duplicates. |
+
+Known limits, to be addressed in the hardening milestone: logout clears the cookie but
+a stolen token stays valid until it expires (tokens are stateless), and there is no
+rate limiting on login yet.
+
+On the frontend, `useCurrentUser` (TanStack Query) asks `/api/auth/me` once and shares
+the answer. `RequireAuth` wraps the app shell and redirects guests to `/login`;
+`GuestOnly` sends logged-in users away from the login and register pages. Logging in or
+out clears the whole query cache so one account's data is never shown to the next.
 
 ## Data model (planned)
 

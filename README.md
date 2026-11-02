@@ -7,8 +7,9 @@ technologies, and answers questions about the implementation with references to 
 exact files and lines. It then turns the codebase into interview preparation: a
 project report, repository-specific questions and a mock interview with feedback.
 
-> Status: early development. The project foundation is in place; repository analysis,
-> chat and interview features are being built milestone by milestone (see
+> Status: early development. The foundation and user accounts (register, log in,
+> log out, protected pages) are in place; repository analysis, chat and interview
+> features are being built milestone by milestone (see
 > [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
@@ -63,6 +64,14 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
+`.env.example` ships with a development-only `JWT_SECRET` so the app runs locally
+straight away. The app refuses to start in production (`APP_ENV=production`) with that
+placeholder; generate a real key first:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
 The API runs at http://localhost:8000. Interactive docs are at
 http://localhost:8000/api/docs, and a health check is at `/api/health`.
 
@@ -93,7 +102,8 @@ npm run build
 
 ## Configuration
 
-Backend settings are read from environment variables or `backend/.env`. See
+Backend settings are read from environment variables or `backend/.env` (found
+relative to the code, so the server can be started from any directory). See
 [`backend/.env.example`](backend/.env.example) for the available options. Secrets
 (API keys, JWT secret, database password) live only in `.env`, which is git-ignored,
 and are never exposed to the frontend.
