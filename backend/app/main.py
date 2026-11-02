@@ -12,6 +12,7 @@ from app.core.logging import configure_logging
 from app.db.session import SessionLocal
 from app.services import repositories
 from app.services.ai import jobs as ai_jobs
+from app.services.rag import chat_jobs, indexer
 from app.worker.runner import get_job_runner
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,12 @@ logger = logging.getLogger(__name__)
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     # Jobs that were running when the previous process stopped will never finish.
     with SessionLocal() as db:
-        interrupted = repositories.mark_interrupted(db) + ai_jobs.mark_interrupted(db)
+        interrupted = (
+            repositories.mark_interrupted(db)
+            + ai_jobs.mark_interrupted(db)
+            + indexer.mark_interrupted(db)
+            + chat_jobs.mark_interrupted(db)
+        )
     if interrupted:
         logger.warning("Marked %d interrupted jobs as failed", interrupted)
     yield
