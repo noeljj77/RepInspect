@@ -10,6 +10,31 @@ export class ApiError extends Error {
   }
 }
 
+interface ValidationIssue {
+  loc?: unknown[]
+  msg?: string
+}
+
+function describeValidationIssues(issues: ValidationIssue[]): string {
+  return issues
+    .map(({ loc, msg }) => {
+      const field = String(loc?.at(-1) ?? '').replaceAll('_', ' ')
+      const label = field ? field.charAt(0).toUpperCase() + field.slice(1) : 'Request'
+      return `${label}: ${msg ?? 'is invalid'}`
+    })
+    .join('. ')
+}
+
+/** Turn FastAPI's `detail` (a string, or a list for 422 validation errors) into one message. */
+function errorMessage(body: unknown, status: number): string {
+  if (typeof body === 'object' && body !== null && 'detail' in body) {
+    const { detail } = body as { detail: unknown }
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail)) return describeValidationIssues(detail as ValidationIssue[])
+  }
+  return `Request failed with status ${status}`
+}
+
 /**
  * Thin wrapper around fetch for calls to our own backend.
  * Paths are relative ("/api/...") so the Vite proxy (dev) or the
@@ -26,12 +51,17 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const body: unknown = isJson ? await response.json() : await response.text()
 
   if (!response.ok) {
-    const detail =
-      typeof body === 'object' && body !== null && 'detail' in body
-        ? String((body as { detail: unknown }).detail)
-        : `Request failed with status ${response.status}`
-    throw new ApiError(response.status, detail, body)
+    throw new ApiError(response.status, errorMessage(body, response.status), body)
   }
 
-  return body as T
+  // 204 No Content has an empty body; callers type those as void.
+  return (response.status === 204 ? undefined : body) as T
+}
+
+export function apiPost<T>(path: string, data?: unknown): Promise<T> {
+  return apiFetch<T>(path, {
+    method: 'POST',
+    headers: data === undefined ? {} : { 'Content-Type': 'application/json' },
+    body: data === undefined ? undefined : JSON.stringify(data),
+  })
 }
