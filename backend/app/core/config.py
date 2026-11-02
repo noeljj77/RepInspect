@@ -78,6 +78,25 @@ class Settings(BaseSettings):
     max_ai_requests_per_user_per_day: int = Field(default=40, gt=0)
     max_active_ai_jobs_per_user: int = Field(default=2, gt=0)
 
+    # --- Chat over the code (retrieval-augmented generation) ----------------
+    # A small embedding model that runs locally on the CPU, so indexing costs nothing
+    # and repository code is not sent anywhere to be embedded. Downloaded on first use.
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # BGE models expect this instruction in front of search queries (not documents).
+    embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
+    embedding_batch_size: int = Field(default=32, gt=0)
+    # Tokens of each chunk the model reads. 256 instead of the model's 512 is about 1.5x
+    # faster with nearly identical vectors: a chunk's first lines carry most of its meaning.
+    embedding_max_tokens: int = Field(default=256, ge=32, le=512)
+    model_cache_dir: Path = BACKEND_DIR / "data" / "models"
+    # Code chunks kept per analysis. Very large repositories are indexed up to this.
+    max_chunks_per_analysis: int = Field(default=20_000, gt=0)
+    # How many excerpts an answer may use, and how much text they may take in total.
+    rag_top_k: int = Field(default=8, gt=0, le=30)
+    rag_context_chars: int = Field(default=24_000, ge=4_000)
+    # Earlier questions and answers sent along, so follow-up questions make sense.
+    chat_history_turns: int = Field(default=3, ge=0, le=10)
+
     @field_validator("cors_origins", mode="before")
     @classmethod
     def split_origins(cls, value: object) -> object:
