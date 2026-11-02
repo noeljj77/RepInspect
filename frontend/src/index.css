@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fragment Mono', ui-monospace, 'Cascadia Code', monospace;
+
+  --color-canvas: #151a24;
+  --color-surface: #1c2230;
+  --color-raised: #232a3a;
+  --color-line: #2e3648;
+  --color-ink: #e7eaf0;
+  --color-muted: #949db0;
+  --color-faint: #636c84;
+
+  /* Highlighter: evidence taken from the repository, and the primary action. */
+  --color-mark: #f2c14e;
+  --color-mark-ink: #221a05;
+  /* AI-generated suggestions that are not verified against the code. */
+  --color-hint: #93a4f5;
+
+  --color-ok: #7fd1a4;
+  --color-danger: #ef8a8a;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-optical-sizing: auto;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-mark);
+    outline-offset: 2px;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-mark) 35%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
