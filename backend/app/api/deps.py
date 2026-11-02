@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.security import decode_access_token
 from app.db.session import get_db
-from app.models import AnalysisStatus, RepositoryAnalysis, SavedRepository, User
-from app.services import repositories, users
+from app.models import RepositoryAnalysis, SavedRepository, User
+from app.services import library, repositories, users
 
 _NOT_AUTHENTICATED = HTTPException(
     status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated"
@@ -48,8 +48,12 @@ def get_completed_analysis(
     repository: SavedRepository = Depends(get_owned_repository),
     db: Session = Depends(get_db),
 ) -> RepositoryAnalysis:
-    """The repository's latest analysis, once it has finished successfully."""
-    analysis = repositories.latest_analysis(db, repository.id)
-    if analysis is None or analysis.status != AnalysisStatus.COMPLETED:
+    """The newest analysis that finished successfully.
+
+    While a refresh runs (or after one fails) this is still the previous version, so the
+    files, explanations and chat stay usable until the new version is complete.
+    """
+    analysis = library.latest_completed(db, repository.id)
+    if analysis is None:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="The analysis has not finished yet")
     return analysis

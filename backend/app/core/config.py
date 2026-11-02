@@ -46,6 +46,8 @@ class Settings(BaseSettings):
 
     # Compressed download size limit (the tarball as sent by GitHub).
     max_download_bytes: int = 50 * MB
+    # Largest ZIP file a person may upload.
+    max_upload_bytes: int = 50 * MB
     # Total uncompressed size the extractor will read through before giving up.
     # This is what stops a small archive that expands to gigabytes (a "zip bomb").
     max_archive_scan_bytes: int = 500 * MB

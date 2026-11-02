@@ -58,6 +58,17 @@ def get_or_create_github(db: Session, user_id: uuid.UUID, ref: RepoRef) -> Saved
     return repository
 
 
+def create_upload(db: Session, user_id: uuid.UUID, name: str) -> SavedRepository:
+    """A new library entry for an uploaded ZIP. Uploads are never treated as duplicates:
+    two ZIPs with the same name can be different projects."""
+    repository = SavedRepository(
+        user_id=user_id, source_type="zip", source_key=f"zip:{uuid.uuid4()}", name=name
+    )
+    db.add(repository)
+    db.commit()
+    return repository
+
+
 def _find_github(db: Session, user_id: uuid.UUID, ref: RepoRef) -> SavedRepository | None:
     return db.scalar(
         select(SavedRepository).where(

@@ -9,6 +9,10 @@ class RepositoryCreate(BaseModel):
     url: str = Field(max_length=500)
 
 
+class RepositoryUpdate(BaseModel):
+    labels: list[str] = Field(max_length=50)
+
+
 class AnalysisSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -23,6 +27,8 @@ class AnalysisSummary(BaseModel):
     skipped_summary: dict[str, int] | None
     redaction_count: int
     truncated: bool
+    # Its stored files were removed after a newer version replaced it (see refresh history).
+    source_removed: bool = False
     created_at: datetime
     completed_at: datetime | None
 
@@ -65,7 +71,8 @@ class RepositorySummary(BaseModel):
     source_url: str | None
     owner: str | None
     name: str
-    label: str | None
+    labels: list[str]
+    collection_ids: list[uuid.UUID]
     description: str | None
     created_at: datetime
     latest_analysis: AnalysisSummary | None
@@ -77,10 +84,42 @@ class RepositoryDetail(BaseModel):
     source_url: str | None
     owner: str | None
     name: str
-    label: str | None
+    labels: list[str]
+    collection_ids: list[uuid.UUID]
     created_at: datetime
+    # The newest version, whatever its status (it may be a refresh still running).
     latest_analysis: AnalysisDetail | None
+    # The newest version that finished: what the page shows. Equal to latest_analysis
+    # unless a refresh is running or failed.
+    current_analysis: AnalysisDetail | None = None
     important_files: list[ImportantFile] = []
+
+
+class PathChangesOut(BaseModel):
+    count: int
+    paths: list[str]  # at most the first 100, sorted
+
+
+class ChangesOut(BaseModel):
+    added: PathChangesOut
+    removed: PathChangesOut
+    modified: PathChangesOut
+    unchanged: int
+    exact: bool
+    technologies_added: list[str]
+    technologies_removed: list[str]
+    dependencies_added: list[str]
+    dependencies_removed: list[str]
+    dependencies_changed: list[str]
+
+
+class VersionChanges(BaseModel):
+    """What changed in one version compared with the version before it."""
+
+    version: int
+    previous_version: int | None
+    previous_commit_sha: str | None
+    changes: ChangesOut | None
 
 
 class FileEntry(BaseModel):
