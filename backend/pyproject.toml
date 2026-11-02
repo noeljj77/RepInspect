@@ -1,0 +1,43 @@
+[project]
+name = "repinspect-backend"
+version = "0.1.0"
+description = "RepInspect API: repository analysis and interview preparation"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.162,<1.0",
+    "uvicorn[standard]>=0.54",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.16",
+    "sqlalchemy>=2.1,<2.2",
+    "alembic>=1.20",
+    "psycopg[binary]>=3.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.2",
+    "httpx>=0.28",
+    "ruff>=0.17",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Depends() in argument defaults is how FastAPI declares dependencies.
+extend-immutable-calls = ["fastapi.Depends"]
