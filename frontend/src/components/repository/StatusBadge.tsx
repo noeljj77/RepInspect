@@ -7,12 +7,13 @@ const labels: Record<AnalysisStatus, string> = {
   queued: 'Queued',
   fetching: 'Downloading',
   extracting: 'Reading files',
+  analyzing: 'Analyzing',
   completed: 'Ready',
   failed: 'Failed',
 }
 
 export default function StatusBadge({ status }: { status: AnalysisStatus }) {
-  const working = status === 'queued' || status === 'fetching' || status === 'extracting'
+  const working = !['completed', 'failed'].includes(status)
   const Icon = status === 'completed' ? CheckCircle2 : status === 'failed' ? AlertCircle : Loader2
 
   return (

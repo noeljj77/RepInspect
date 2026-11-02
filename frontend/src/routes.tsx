@@ -8,6 +8,9 @@ import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RegisterPage from './pages/RegisterPage'
 import RepositoryPage from './pages/RepositoryPage'
+import DependenciesTab from './pages/repository/DependenciesTab'
+import FilesTab from './pages/repository/FilesTab'
+import OverviewTab from './pages/repository/OverviewTab'
 
 // Kept separate from App so tests can mount the same routes in a memory router.
 export const routes: RouteObject[] = [
@@ -27,7 +30,15 @@ export const routes: RouteObject[] = [
         element: <AppLayout />,
         children: [
           { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/repositories/:repositoryId', element: <RepositoryPage /> },
+          {
+            path: '/repositories/:repositoryId',
+            element: <RepositoryPage />,
+            children: [
+              { index: true, element: <OverviewTab /> },
+              { path: 'files', element: <FilesTab /> },
+              { path: 'dependencies', element: <DependenciesTab /> },
+            ],
+          },
         ],
       },
     ],

@@ -7,6 +7,7 @@ const steps: Array<{ status: AnalysisStatus; label: string; detail: string }> = 
   { status: 'queued', label: 'Waiting to start', detail: 'Your analysis is in the queue.' },
   { status: 'fetching', label: 'Downloading from GitHub', detail: 'Fetching repository details and the code.' },
   { status: 'extracting', label: 'Reading files', detail: 'Sorting out source files and skipping anything sensitive.' },
+  { status: 'analyzing', label: 'Analyzing code', detail: 'Finding functions, classes, dependencies and frameworks.' },
 ]
 
 export default function AnalysisProgress({ status }: { status: AnalysisStatus }) {
