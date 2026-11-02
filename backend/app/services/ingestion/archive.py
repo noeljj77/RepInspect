@@ -1,9 +1,11 @@
 """Safely unpack a repository archive into a directory of filtered, redacted text files.
 
-The archive is untrusted input. Protections:
+Two formats: the .tar.gz GitHub serves, and .zip files people upload. Both go through
+the same per-file checks below. The archive is untrusted input. Protections:
 - Path traversal: absolute paths, drive letters and ".." components abort the import,
   and every file is checked to land inside the destination directory.
-- Links and special files (symlinks, hardlinks, devices) are never created.
+- Links and special files (symlinks, hardlinks, devices) are never created. Encrypted
+  ZIP entries are skipped.
 - Names that are unsafe on Windows (": * ? \\", reserved device names) are skipped.
 - Archive bombs: the sizes of everything read through are summed against a limit, and
   only files up to max_file_bytes are ever read into memory.
@@ -11,9 +13,13 @@ The archive is untrusted input. Protections:
 - Nothing is executed, and extracted files get default permissions (never executable).
 """
 
+import hashlib
 import re
+import stat
 import tarfile
+import zipfile
 import zlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -66,6 +72,8 @@ class FileRecord:
     language: str | None
     line_count: int | None = None
     skipped_reason: str | None = None  # None means the file was stored
+    # SHA-256 of the stored (redacted) text, used to see which files changed between versions.
+    content_hash: str | None = None
 
 
 @dataclass
@@ -86,7 +94,7 @@ class ExtractionResult:
         self.skipped_counts[reason] = self.skipped_counts.get(reason, 0) + 1
 
 
-def relative_member_path(member_name: str) -> str | None:
+def relative_member_path(member_name: str, strip_wrapper: bool = True) -> str | None:
     """Path inside the repository, or None for the wrapper directory itself.
 
     GitHub wraps everything in one top-level folder ("owner-repo-sha/..."), which is
@@ -102,7 +110,7 @@ def relative_member_path(member_name: str) -> str | None:
     # Keep the original separators for names that contain backslashes, so the
     # portability check below can reject them instead of silently rewriting them.
     original_parts = [p for p in member_name.split("/") if p not in ("", ".")]
-    inner = original_parts[1:]
+    inner = original_parts[1:] if strip_wrapper else original_parts
     return "/".join(inner) if inner else None
 
 
@@ -118,6 +126,10 @@ def is_portable_path(path: str) -> bool:
 
 def count_lines(text: str) -> int:
     return text.count("\n") + (1 if text and not text.endswith("\n") else 0)
+
+
+# Reads a member's content, at most `limit` bytes. None for something that is not a file.
+Reader = Callable[[int], bytes | None]
 
 
 def extract_tar_gz(archive: Path, destination: Path, limits: ExtractionLimits) -> ExtractionResult:
@@ -142,7 +154,12 @@ def extract_tar_gz(archive: Path, destination: Path, limits: ExtractionLimits) -
                 if not member.isfile():
                     result.count_skipped(SPECIAL_FILE)
                     continue
-                if not _handle_file(tar, member, path, root, limits, result):
+
+                def read(limit: int, member: tarfile.TarInfo = member) -> bytes | None:
+                    source = tar.extractfile(member)
+                    return None if source is None else source.read(limit)
+
+                if not _handle_file(read, member.size, path, root, limits, result):
                     break
     except (tarfile.TarError, EOFError, OSError, zlib.error):
         raise UnsafeArchive("The repository archive could not be read.") from None
@@ -150,9 +167,67 @@ def extract_tar_gz(archive: Path, destination: Path, limits: ExtractionLimits) -
     return result
 
 
+def _has_single_wrapper(names: list[str]) -> bool:
+    """True when every entry sits in one top-level folder, as in GitHub's "Download ZIP"."""
+    tops = {name.replace("\\", "/").lstrip("/").split("/", 1)[0] for name in names}
+    return len(tops) == 1 and all("/" in name.replace("\\", "/").strip("/") for name in names)
+
+
+def _is_zip_link_or_special(info: zipfile.ZipInfo) -> bool:
+    """ZIP files made on Unix store the file mode in the upper bits of external_attr.
+
+    Many tools store only permission bits (no file type); those are ordinary files. Only
+    an explicit type other than file or directory (a symlink, a device) is refused.
+    """
+    kind = stat.S_IFMT(info.external_attr >> 16)
+    return kind not in (0, stat.S_IFREG, stat.S_IFDIR)
+
+
+def extract_zip(archive: Path, destination: Path, limits: ExtractionLimits) -> ExtractionResult:
+    """Unpack an uploaded .zip. A single top-level folder is dropped, like GitHub's wrapper."""
+    destination.mkdir(parents=True, exist_ok=True)
+    root = destination.resolve()
+    result = ExtractionResult()
+    scanned = 0
+
+    try:
+        with zipfile.ZipFile(archive) as zf:
+            entries = [info for info in zf.infolist() if not info.is_dir()]
+            strip = _has_single_wrapper([info.filename for info in entries])
+            for info in entries:
+                # The declared size, summed. ZipFile never returns more than the declared size
+                # for an entry, so this bounds what is decompressed (zip bombs included).
+                scanned += max(info.file_size, 0)
+                if scanned > limits.max_scan_bytes:
+                    raise RepositoryTooLarge(
+                        "This archive expands to more data than the import limit allows."
+                    )
+                path = relative_member_path(info.filename, strip_wrapper=strip)
+                if path is None:
+                    continue
+                if _is_zip_link_or_special(info) or info.flag_bits & 0x1:  # 0x1: encrypted
+                    result.count_skipped(SPECIAL_FILE)
+                    continue
+
+                def read(limit: int, info: zipfile.ZipInfo = info) -> bytes | None:
+                    with zf.open(info) as source:
+                        return source.read(limit)
+
+                if not _handle_file(read, info.file_size, path, root, limits, result):
+                    break
+    except (zipfile.BadZipFile, zipfile.LargeZipFile, EOFError, OSError, zlib.error):
+        raise UnsafeArchive("The ZIP file could not be read. Is it a valid .zip archive?") from None
+    except NotImplementedError:  # an unsupported compression method
+        raise UnsafeArchive(
+            "The ZIP file uses a compression method that is not supported."
+        ) from None
+
+    return result
+
+
 def _handle_file(
-    tar: tarfile.TarFile,
-    member: tarfile.TarInfo,
+    read: Reader,
+    size: int,
     path: str,
     root: Path,
     limits: ExtractionLimits,
@@ -167,24 +242,20 @@ def _handle_file(
         return True
 
     reason = file_filter.skip_reason(path)
-    if reason is None and member.size > limits.max_file_bytes:
+    if reason is None and size > limits.max_file_bytes:
         reason = TOO_LARGE
     if reason is not None:
-        _record_skipped(result, path, member.size, reason, limits)
+        _record_skipped(result, path, size, reason, limits)
         return True
 
-    if (
-        result.kept_count >= limits.max_files
-        or result.total_bytes + member.size > limits.max_total_bytes
-    ):
+    if result.kept_count >= limits.max_files or result.total_bytes + size > limits.max_total_bytes:
         result.truncated = True
         return False
 
-    source = tar.extractfile(member)
-    if source is None:
+    data = read(limits.max_file_bytes + 1)
+    if data is None:
         result.count_skipped(SPECIAL_FILE)
         return True
-    data = source.read(limits.max_file_bytes + 1)
     if len(data) > limits.max_file_bytes:
         _record_skipped(result, path, len(data), TOO_LARGE, limits)
         return True
@@ -200,6 +271,10 @@ def _handle_file(
     target = root / path
     if not target.resolve().is_relative_to(root):
         raise UnsafeArchive("The archive contains an unsafe file path, so it was not imported.")
+    if target.exists():
+        # Two entries with the same path (possible in a ZIP): keep the first.
+        result.count_skipped(UNWRITABLE)
+        return True
     try:
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(encoded)
@@ -217,6 +292,7 @@ def _handle_file(
             size_bytes=len(encoded),
             language=detect_language(path),
             line_count=count_lines(text),
+            content_hash=hashlib.sha256(encoded).hexdigest(),
         )
     )
     return True
