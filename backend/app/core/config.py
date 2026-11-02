@@ -12,9 +12,12 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 DEV_SECRET_PREFIX = "dev-only"
 
 
+BACKEND_DIR = Path(__file__).resolve().parents[2]
 # backend/.env, found relative to this file so the app starts correctly no
 # matter which directory it is launched from.
-ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+ENV_FILE = BACKEND_DIR / ".env"
+
+MB = 1024 * 1024
 
 
 class Settings(BaseSettings):
@@ -35,6 +38,28 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr = Field(min_length=32)
     access_token_expire_minutes: int = Field(default=60 * 24 * 7, gt=0)
     session_cookie_name: str = "repinspect_session"
+
+    # --- GitHub ingestion -------------------------------------------------
+    # Optional. Without a token GitHub allows 60 API requests per hour; with one, 5000.
+    github_token: SecretStr | None = None
+    github_timeout_seconds: float = Field(default=10.0, gt=0)
+
+    # Compressed download size limit (the tarball as sent by GitHub).
+    max_download_bytes: int = 50 * MB
+    # Total uncompressed size the extractor will read through before giving up.
+    # This is what stops a small archive that expands to gigabytes (a "zip bomb").
+    max_archive_scan_bytes: int = 500 * MB
+    max_files: int = Field(default=5000, gt=0)  # files kept per analysis
+    max_file_bytes: int = 1 * MB  # larger files are skipped
+    max_total_bytes: int = 100 * MB  # total of kept files
+    max_listed_skipped_files: int = 5000  # skipped files recorded individually
+
+    # Where filtered source snapshots are stored (later also FAISS indexes).
+    artifact_dir: Path = BACKEND_DIR / "data" / "artifacts"
+
+    # Analyses run in background threads inside the API process.
+    analysis_workers: int = Field(default=2, gt=0)
+    max_active_analyses_per_user: int = Field(default=3, gt=0)
 
     @field_validator("cors_origins", mode="before")
     @classmethod
