@@ -1,23 +1,21 @@
 import { screen } from '@testing-library/react'
 
+import { ada, mockApi } from '../test/mockApi'
 import { renderRoute } from '../test/renderRoute'
 
-function mockFetch(status: number, body: unknown) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }),
-    ),
-  )
-}
-
-afterEach(() => {
-  vi.unstubAllGlobals()
-})
+const me = { body: ada }
+const healthy = { body: { status: 'ok', version: '0.1.0', database: 'ok' } }
 
 describe('DashboardPage', () => {
+  it('greets the logged-in user', async () => {
+    mockApi({ 'GET /api/auth/me': me, 'GET /api/health': healthy })
+    renderRoute('/dashboard')
+
+    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+  })
+
   it('shows a connected database when the API is healthy', async () => {
-    mockFetch(200, { status: 'ok', version: '0.1.0', database: 'ok' })
+    mockApi({ 'GET /api/auth/me': me, 'GET /api/health': healthy })
     renderRoute('/dashboard')
 
     expect(await screen.findByText('Connected')).toBeInTheDocument()
@@ -26,7 +24,10 @@ describe('DashboardPage', () => {
   })
 
   it('reports the database as unavailable when the API returns 503', async () => {
-    mockFetch(503, { status: 'degraded', version: '0.1.0', database: 'unavailable' })
+    mockApi({
+      'GET /api/auth/me': me,
+      'GET /api/health': { status: 503, body: { status: 'degraded', version: '0.1.0', database: 'unavailable' } },
+    })
     renderRoute('/dashboard')
 
     expect(await screen.findByText('Unavailable')).toBeInTheDocument()
@@ -34,16 +35,16 @@ describe('DashboardPage', () => {
   })
 
   it('reports the API as unreachable when the request fails', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    mockApi({ 'GET /api/auth/me': me, 'GET /api/health': 'network-error' })
     renderRoute('/dashboard')
 
     expect(await screen.findByText('Unreachable')).toBeInTheDocument()
   })
 
-  it('marks Dashboard as the active navigation item', () => {
-    mockFetch(200, { status: 'ok', version: '0.1.0', database: 'ok' })
+  it('marks Dashboard as the active navigation item', async () => {
+    mockApi({ 'GET /api/auth/me': me, 'GET /api/health': healthy })
     renderRoute('/dashboard')
 
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
   })
 })
