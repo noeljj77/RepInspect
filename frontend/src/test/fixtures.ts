@@ -1,6 +1,9 @@
 import type {
   AnalysisDetail,
   AnalysisSummary,
+  Dependency,
+  FileContent,
+  FileEntry,
   RepositoryDetail,
   RepositorySummary,
 } from '../api/repositories'
@@ -41,6 +44,38 @@ export function analysis(overrides: Partial<AnalysisDetail> = {}): AnalysisDetai
       fork: false,
     },
     languages: { Python: 900, HTML: 100 },
+    technologies: [
+      {
+        name: 'Flask',
+        category: 'Backend framework',
+        evidence: [
+          { kind: 'dependency', path: 'pyproject.toml', line: 12, detail: 'flask >=3.0' },
+          { kind: 'import', path: 'src/flask/app.py', line: 3, detail: 'import flask' },
+        ],
+      },
+      {
+        name: 'pytest',
+        category: 'Testing',
+        evidence: [{ kind: 'file', path: 'pytest.ini', line: null, detail: 'pytest.ini' }],
+      },
+    ],
+    code_stats: {
+      languages: [
+        { name: 'Python', files: 40, lines: 9000, bytes: 300000, is_programming: true },
+        { name: 'Markdown', files: 5, lines: 800, bytes: 20000, is_programming: false },
+      ],
+      totals: {
+        files: 12,
+        code_lines: 9000,
+        symbols: 300,
+        symbols_by_kind: { function: 120, method: 150, class: 25, interface: 0, enum: 0, type: 5 },
+        imports: 200,
+        internal_imports: 90,
+        dependencies: 7,
+        test_files: 4,
+        parse_errors: 0,
+      },
+    },
     readme_path: 'README.md',
     readme_text: '# Flask\n\nA small web framework.',
     ...overrides,
@@ -49,6 +84,7 @@ export function analysis(overrides: Partial<AnalysisDetail> = {}): AnalysisDetai
 
 export function repositoryDetail(
   analysisOverrides: Partial<AnalysisDetail> | null = {},
+  overrides: Partial<RepositoryDetail> = {},
 ): RepositoryDetail {
   return {
     id: REPO_ID,
@@ -59,6 +95,82 @@ export function repositoryDetail(
     label: null,
     created_at: '2026-11-02T10:00:00Z',
     latest_analysis: analysisOverrides === null ? null : analysis(analysisOverrides),
+    important_files: [
+      { path: 'README.md', language: 'Markdown', score: 50, reasons: ['Project README'] },
+      {
+        path: 'src/flask/app.py',
+        language: 'Python',
+        score: 45,
+        reasons: ['Application entry point', 'Imported by 12 files'],
+      },
+    ],
+    ...overrides,
+  }
+}
+
+export function fileEntry(overrides: Partial<FileEntry> = {}): FileEntry {
+  return {
+    path: 'src/flask/app.py',
+    language: 'Python',
+    size_bytes: 1200,
+    line_count: 40,
+    skipped_reason: null,
+    importance_score: 0,
+    symbol_count: 0,
+    parse_error: false,
+    ...overrides,
+  }
+}
+
+export function fileContent(overrides: Partial<FileContent> = {}): FileContent {
+  return {
+    path: 'src/flask/app.py',
+    language: 'Python',
+    size_bytes: 1200,
+    line_count: 6,
+    content: 'import os\nfrom .helpers import url_for\n\n\nclass Flask:\n    def run(self): ...\n',
+    parse_error: false,
+    importance_reasons: ['Application entry point'],
+    symbols: [
+      {
+        kind: 'class',
+        name: 'Flask',
+        qualified_name: 'Flask',
+        start_line: 5,
+        end_line: 6,
+        signature: 'class Flask',
+        doc: null,
+        decorators: null,
+      },
+      {
+        kind: 'method',
+        name: 'run',
+        qualified_name: 'Flask.run',
+        start_line: 6,
+        end_line: 6,
+        signature: 'def run(self)',
+        doc: null,
+        decorators: null,
+      },
+    ],
+    imports: [
+      { module: 'os', names: [], line: 1, resolved_path: null },
+      { module: '.helpers', names: ['url_for'], line: 2, resolved_path: 'src/flask/helpers.py' },
+    ],
+    imported_by: ['src/flask/__init__.py', 'tests/test_app.py'],
+    ...overrides,
+  }
+}
+
+export function dependency(overrides: Partial<Dependency> = {}): Dependency {
+  return {
+    ecosystem: 'pypi',
+    name: 'flask',
+    version_spec: '>=3.0',
+    scope: 'runtime',
+    source_file: 'pyproject.toml',
+    line: 12,
+    ...overrides,
   }
 }
 

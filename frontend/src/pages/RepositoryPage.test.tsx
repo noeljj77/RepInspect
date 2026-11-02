@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { mockApi, ada } from '../test/mockApi'
-import { REPO_ID, repositoryDetail } from '../test/fixtures'
+import { analysis, REPO_ID, repositoryDetail } from '../test/fixtures'
 import { renderRoute } from '../test/renderRoute'
 
 const path = `/repositories/${REPO_ID}`
@@ -76,17 +76,37 @@ describe('RepositoryPage', () => {
       expect(within(facts).getByText('main')).toBeInTheDocument()
     })
 
-    it('shows the language breakdown with percentages', async () => {
-      open(repositoryDetail({ languages: { Python: 900, HTML: 100 } }))
+    it('shows the languages found in the imported files, by lines of code', async () => {
+      open(
+        repositoryDetail({
+          code_stats: {
+            ...analysis().code_stats!,
+            languages: [
+              { name: 'Python', files: 9, lines: 900, bytes: 1, is_programming: true },
+              { name: 'TypeScript', files: 1, lines: 100, bytes: 1, is_programming: true },
+              { name: 'Markdown', files: 4, lines: 5000, bytes: 1, is_programming: false },
+            ],
+          },
+        }),
+      )
 
-      const bar = await screen.findByRole('img', { name: /Languages: Python 90\.0%, HTML 10\.0%/ })
-      expect(bar).toBeInTheDocument()
-      expect(screen.getByText('90.0%')).toBeInTheDocument()
+      const bar = await screen.findByRole('img', { name: /Languages: Python 90\.0%, TypeScript 10\.0%/ })
+      expect(bar).toBeInTheDocument() // documentation and data files do not count as code
+      expect(screen.getByRole('heading', { name: 'Languages, by lines of code' })).toBeInTheDocument()
+    })
+
+    it("falls back to GitHub's language breakdown without code analysis", async () => {
+      open(repositoryDetail({ code_stats: null, technologies: null, languages: { Python: 900, HTML: 100 } }))
+
+      expect(await screen.findByRole('img', { name: /Languages: Python 90\.0%, HTML 10\.0%/ })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Languages' })).toBeInTheDocument()
+      expect(screen.getByText(/Code analysis was not available for this import/)).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Frameworks and libraries' })).not.toBeInTheDocument()
     })
 
     it('groups very small languages into Other', async () => {
       const many = Object.fromEntries(Array.from({ length: 9 }, (_, i) => [`Lang${i}`, 100 - i]))
-      open(repositoryDetail({ languages: many }))
+      open(repositoryDetail({ code_stats: null, languages: many }))
 
       expect(await screen.findByText('Other')).toBeInTheDocument()
     })
