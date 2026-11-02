@@ -9,8 +9,9 @@ export default defineConfig({
     port: 5173,
     // Forward API calls to FastAPI so the browser sees a single origin.
     // This keeps auth cookies same-site and avoids CORS in development.
+    // API_PROXY_TARGET points it elsewhere, for example when port 8000 is taken.
     proxy: {
-      '/api': 'http://localhost:8000',
+      '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:8000',
     },
   },
   test: {
