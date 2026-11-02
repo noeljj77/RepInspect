@@ -7,12 +7,12 @@ technologies, and answers questions about the implementation with references to 
 exact files and lines. It then turns the codebase into interview preparation: a
 project report, repository-specific questions and a mock interview with feedback.
 
-> Status: early development. User accounts, GitHub import, static code analysis and
-> AI explanations are in place: save a public repository, browse its files with an
-> outline of every function and class, see its dependencies, frameworks and most
-> important files, and get an overview and file explanations that quote the code they
-> rely on. Chat and interview features are being built milestone by milestone (see
-> [docs/architecture.md](docs/architecture.md)).
+> Status: early development. User accounts, GitHub import, static code analysis, AI
+> explanations and chat are in place: save a public repository, browse its files with
+> an outline of every function and class, see its dependencies, frameworks and most
+> important files, get an overview and file explanations, and ask questions whose
+> answers quote the exact lines they rely on. Interview features are being built
+> milestone by milestone (see [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
 
@@ -21,7 +21,7 @@ project report, repository-specific questions and a mock interview with feedback
 | Frontend | React, TypeScript, Vite, Tailwind CSS, React Router, TanStack Query, Lucide |
 | Backend | Python 3.11, FastAPI, Pydantic, SQLAlchemy 2, Alembic |
 | Database | PostgreSQL 17 |
-| AI | Google Gemini behind a swappable provider layer; Sentence Transformers and FAISS (planned) |
+| AI | Google Gemini behind a swappable provider layer; Sentence Transformers (`bge-small-en-v1.5`) and FAISS for search |
 | Code analysis | Python `ast`, Tree-sitter (JavaScript, TypeScript, Java), GitHub REST API |
 | Testing | Pytest, Vitest, React Testing Library |
 
@@ -148,6 +148,32 @@ temporary errors, and each user gets a daily allowance (40 requests by default) 
 most two running at once. These limits are in `.env.example`. On the free tier Google
 may use the prompts to improve its products, so do not analyze code you are not allowed
 to share.
+
+## Chat with a repository
+
+The Chat tab answers questions about one analyzed repository. After each import the
+backend builds a search index of the code (about a minute for a mid-sized repository,
+with progress shown on the page). Imports made before chat existed get a "Build the
+search index" button instead.
+
+- Files are split into chunks along their functions, classes and Markdown sections, so a
+  search result is a whole function rather than an arbitrary slice of lines.
+- Each question is matched three ways: by meaning (vectors from a small embedding model
+  that runs locally, searched with FAISS), by keywords (Postgres full-text search, with
+  `camelCase` and `snake_case` names split into words), and by files or functions the
+  question names. The rankings are merged, and the best excerpts go to the model.
+- The answer cites the excerpts with markers such as [1]. Every quote is checked against
+  the real file before it is shown, unconfirmed citations are removed, and answers the
+  code does not support are marked as such. "Searched N parts of the code" shows what
+  the search found and why.
+- Short follow-up questions ("and where is it called?") are searched together with the
+  previous question, and the last few turns are sent along as context.
+
+The embedding model (about 130 MB) is downloaded from Hugging Face the first time an
+index is built, into `backend/data/models`. After that it loads from disk and works
+offline. Indexing runs on the CPU, and pip installs the CPU-only build of PyTorch on
+Windows. Chat questions use the same Gemini key and daily allowance as the AI
+explanations.
 
 ## Running tests
 

@@ -33,8 +33,9 @@ generating), which keeps them independently testable.
    dependency manifests, detect frameworks and score important files.
 3. **Indexing** – split code into chunks along function and class boundaries, embed
    them with Sentence Transformers and store the vectors in a FAISS index.
-4. **AI features** – overview, file explanations, chat, interview report, questions and
-   mock interviews all use the same retriever, so every answer is grounded the same way.
+4. **AI features** – explanations read a curated evidence pack; chat (and later the
+   interview features) uses the retriever. Both pass through the same grounding checks,
+   so every answer is verified against the code the same way.
 
 Repository code is never executed.
 
@@ -75,6 +76,7 @@ later migrations.
 | `src/components/auth/` | Route guards and the login/register page shell |
 | `src/components/ui/` | Small shared pieces (button styles, logo) |
 | `src/components/ai/` | AI explanation panel (request, wait, failure, regenerate), findings and citations |
+| `src/components/chat/` | Chat tab pieces: index progress, question box, answers with citation markers |
 | `src/components/layout/` | Public header and authenticated app shell |
 | `src/pages/` | One component per route |
 
@@ -222,11 +224,13 @@ GET endpoint every two seconds while the status is `pending`.
 
 Implemented so far: `users`, `saved_repositories`, `repository_analyses`,
 `analysis_files`, `code_symbols`, `code_imports`, `dependencies`, `ai_explanations`,
-`ai_requests`. The rest is planned.
+`ai_requests`, `search_indexes`, `code_chunks`, `chat_sessions`, `chat_messages`. The rest
+is planned.
 
 ```
 users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< analysis_files ──< code_symbols
        │                       │                         ├─< dependencies
+       │                       │                         ├── search_indexes (one per analysis)
        │                       │                         ├─< code_chunks
        │                       │                         ├─< ai_explanations
        │                       │                         ├─< chat_sessions ──< chat_messages
@@ -247,18 +251,32 @@ users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< an
   analysis, kind and file. Regenerating replaces it. A new analysis starts without
   explanations, since the code may have changed.
 
-## Retrieval-augmented generation (planned)
+## Chat: retrieval-augmented generation
 
 ```
-Indexing:  files → chunks (+ path, line range, symbol) → embeddings → FAISS
-                                       └──────────────→ code_chunks table
-Querying:  question → embedding → nearest chunks → prompt with delimited code
-           → structured answer with citations → citation check → UI
+Indexing (after each import, in the same background job):
+  stored files + symbols -> chunks -+-> code_chunks rows -> tsvector (keyword search)
+                                    +-> embeddings -----> FAISS file (search by meaning)
+
+Answering (one background job per question):
+  question -+- meaning   (FAISS, top 30)    -+
+            +- keywords  (Postgres, top 30)  +-> reciprocal rank fusion -> top 8 excerpts
+            +- names     (paths, symbols)   -+
+         -> fenced prompt -> Gemini (JSON with [n] markers and quotes) -> grounding -> stored
 ```
 
-Repository content is treated as untrusted data. It is wrapped in delimited blocks, the
-model is told never to follow instructions inside it, output must match a schema, and any
-cited file or line range that was not part of the retrieved context is removed.
+| Concern | Decision |
+|---|---|
+| Chunking | `services/rag/chunking.py` follows the symbols from static analysis: a function or small class is one chunk; a class too large for one is split into its methods plus the code between them; module-level code and files without symbols become overlapping 40-line windows; Markdown is cut at headings (not inside code fences). Limits: 60 lines and 2,400 characters. Lock files, minified code and large data files are skipped. Each chunk keeps its exact line range, so answers can cite lines. |
+| Embedding model | `BAAI/bge-small-en-v1.5` through Sentence Transformers: 384 dimensions, about 130 MB, runs on the CPU, no API cost, and repository code is never sent elsewhere to be embedded. Chunks are prefixed with their file path and symbol. The model reads the first 256 tokens of each chunk: measured 1.5x faster than 512, with vectors at 0.995 cosine similarity to the full-length ones. Models that need `trust_remote_code` were avoided. |
+| Vector index | One FAISS `IndexFlatIP` per analysis, stored next to the source snapshot. Vectors are normalised, so inner product is cosine similarity. Exact search over a few thousand vectors takes milliseconds; approximate indexes (IVF, HNSW) only pay off at millions. Vector N belongs to the chunk with ordinal N, so no id map is needed. Indexes are written with `serialize_index` and an atomic rename, which also avoids FAISS's own file functions that fail on non-ASCII Windows paths. |
+| Keyword search | A generated `tsvector` column (path and symbol weighted highest, then split identifiers, then the code) with a GIN index. Questions become an OR query, because `plainto_tsquery` would require every word of a natural-language question. |
+| Hybrid ranking | Reciprocal rank fusion (`1 / (60 + rank)`, summed over the lists) merges the three searches without comparing a cosine score with a text-search rank. Explicit file or function names count double. Overlapping windows of the same lines are not both used, and excerpts stop at a character budget (`RAG_CONTEXT_CHARS`). Measured on `pallets/click` (1,966 chunks): 40-130 ms per search. |
+| Grounding | The model returns an answer with [n] markers and a list of citations (path, lines, exact quote). The checks from the AI explanations run on every citation; markers are renumbered to the citations that survived, and markers for dropped ones are removed. `answerable: false` is shown as "not found in the code that was searched". |
+| Conversation | Messages have an explicit `position` (a question and its pending answer are created in one transaction, so timestamps cannot order them). The last three turns go to the model as context, with markers stripped, and are marked as not being evidence. Short follow-ups are searched together with the previous question. |
+| Prompt injection | The same defences as the explanations: excerpts are fenced with a random per-request marker and the system prompt says to treat them as data. Answers are rendered by splitting text into React elements, never as HTML. |
+| Limits | Each question counts against the shared daily AI allowance (`ai_requests`), and running answers count towards the cap on simultaneous AI requests. One question at a time per conversation. |
+| Index lifecycle | `search_indexes` holds the status and progress (chunks embedded so far) for the page to poll. A failure leaves the analysis usable and the page offers a rebuild. Interrupted indexing and answers are marked failed on startup. A conversation belongs to one analysis, because its citations point at lines of that exact version. |
 
 ## Milestones
 
