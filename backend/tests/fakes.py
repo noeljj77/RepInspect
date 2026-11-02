@@ -1,14 +1,18 @@
-"""Test doubles: a fake GitHub (no network) and a tarball builder for crafting archives."""
+"""Test doubles: a fake GitHub (no network), a tarball builder, a scripted language model
+and an embedding model that needs no PyTorch."""
 
 import io
 import re
 import tarfile
 import time
+import zlib
 from types import SimpleNamespace
 
 import httpx
+import numpy as np
 
 from app.services.llm.base import LLMResult
+from app.services.rag.chunking import split_identifier
 
 SHA = "1234567890abcdef1234567890abcdef12345678"
 
@@ -189,3 +193,37 @@ class FakeLLM:
 
     def close(self) -> None:
         self.closed = True
+
+
+class FakeEmbedder:
+    """Word-hashing vectors instead of a neural model: no PyTorch, instant, deterministic.
+
+    Each word (identifiers split into parts) adds 1 to one of 256 positions, chosen by a
+    hash of the word. Texts that share words point in similar directions, which is enough
+    to test that retrieval ranks the right chunk first.
+    """
+
+    model_name = "fake-embedder"
+    dimension = 256
+
+    def __init__(self) -> None:
+        self.documents_embedded = 0
+
+    def _vector(self, text: str) -> np.ndarray:
+        vector = np.zeros(self.dimension, dtype=np.float32)
+        for word in re.findall(r"[A-Za-z0-9]+", text):
+            for part in {word.lower(), *split_identifier(word)}:
+                vector[zlib.crc32(part.encode()) % self.dimension] += 1.0
+        norm = float(np.linalg.norm(vector))
+        return vector / norm if norm else vector
+
+    def embed_documents(self, texts: list[str]) -> np.ndarray:
+        self.documents_embedded += len(texts)
+        return (
+            np.stack([self._vector(t) for t in texts])
+            if texts
+            else np.zeros((0, self.dimension), np.float32)
+        )
+
+    def embed_query(self, text: str) -> np.ndarray:
+        return self._vector(text)

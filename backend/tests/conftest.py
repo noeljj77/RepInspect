@@ -32,8 +32,9 @@ from app.main import create_app  # noqa: E402
 from app.services.ai import jobs as ai_jobs  # noqa: E402
 from app.services.ingestion import pipeline  # noqa: E402
 from app.services.ingestion.github_client import GitHubClient  # noqa: E402
+from app.services.rag import embeddings  # noqa: E402
 from app.worker.runner import get_job_runner  # noqa: E402
-from tests.fakes import FakeGitHub, FakeLLM, InlineRunner  # noqa: E402
+from tests.fakes import FakeEmbedder, FakeGitHub, FakeLLM, InlineRunner  # noqa: E402
 
 ALEMBIC_INI = Path(__file__).resolve().parent.parent / "alembic.ini"
 
@@ -100,4 +101,12 @@ def llm(monkeypatch) -> FakeLLM:
     monkeypatch.setattr(ai_jobs, "create_provider", lambda: fake)
     monkeypatch.setattr(get_settings(), "llm_provider", "gemini")
     monkeypatch.setattr(get_settings(), "gemini_api_key", SecretStr("test-key"))
+    return fake
+
+
+@pytest.fixture(autouse=True)
+def embedder(monkeypatch) -> FakeEmbedder:
+    """Every test uses the fake embedding model, so none of them loads PyTorch."""
+    fake = FakeEmbedder()
+    monkeypatch.setattr(embeddings, "get_embedder", lambda: fake)
     return fake
