@@ -17,7 +17,7 @@ def login(client, email=NEW_USER["email"], password=NEW_USER["password"]):
     return client.post("/api/auth/login", json={"email": email, "password": password})
 
 
-# --- register ---------------------------------------------------------------
+# --- register ---
 
 
 def test_register_creates_account_and_logs_in(client):
@@ -72,7 +72,7 @@ def test_register_validates_input(client):
     assert client.post("/api/auth/register", json={}).status_code == 422
 
 
-# --- login ------------------------------------------------------------------
+# --- login ---
 
 
 def test_login_with_correct_credentials(client, other_client):
@@ -96,7 +96,7 @@ def test_login_failures_look_identical_for_wrong_password_and_unknown_email(clie
     assert COOKIE not in other_client.cookies
 
 
-# --- current user -----------------------------------------------------------
+# --- current user ---
 
 
 def test_me_requires_login(client):
@@ -130,7 +130,7 @@ def test_each_session_only_sees_its_own_user(client, other_client):
     assert other_client.get("/api/auth/me").json()["display_name"] == "Grace"
 
 
-# --- logout -----------------------------------------------------------------
+# --- logout ---
 
 
 def test_logout_clears_the_session(client):
