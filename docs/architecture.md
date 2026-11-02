@@ -77,6 +77,7 @@ later migrations.
 | `src/components/ui/` | Small shared pieces (button styles, logo) |
 | `src/components/ai/` | AI explanation panel (request, wait, failure, regenerate), findings and citations |
 | `src/components/chat/` | Chat tab pieces: index progress, question box, answers with citation markers |
+| `src/components/library/` | Labels, collections, notes, refresh, upload and delete controls |
 | `src/components/layout/` | Public header and authenticated app shell |
 | `src/pages/` | One component per route |
 
@@ -142,7 +143,7 @@ Four API calls per analysis keeps the unauthenticated limit (60 per hour) workab
 |---|---|
 | SSRF | Requests only go to `api.github.com` and `codeload.github.com` over https. Redirects are followed by hand and every hop is checked, so a redirect to an internal address is never requested. The token is only sent to `api.github.com`. |
 | Private code | Repositories that are not public are refused even if a configured token could read them. |
-| Archive attacks | One extractor (`archive.py`) rejects `..`, absolute and drive-letter paths, never creates symlinks or special files, skips names unsafe on Windows, and counts bytes read to stop expansion bombs. It is written to be reused for ZIP uploads. |
+| Archive attacks | One extractor (`archive.py`) rejects `..`, absolute and drive-letter paths, never creates symlinks or special files, skips names unsafe on Windows, and counts bytes read to stop expansion bombs. The same per-file checks handle ZIP uploads (see below). |
 | Resource limits | Download size, bytes scanned, file count, per-file size and total size are all capped. Hitting a cap ends the import and marks the analysis as truncated. |
 | Secrets | Files such as `.env`, keys and credentials are never stored. Token formats and `password = "..."` style values in other files are replaced with `[REDACTED]` before writing, keeping line numbers intact. |
 | Timeouts and failures | Every request has a timeout. Not found, rate limit (with reset time), empty repository, too large, GitHub down and unsafe archive each produce a specific message. Unexpected errors are logged and shown generically. |
@@ -151,6 +152,29 @@ Four API calls per analysis keeps the unauthenticated limit (60 per hour) workab
 
 Files are served only if they are recorded in `analysis_files` as stored, and the path
 is also checked to stay inside the snapshot, so a crafted path never reaches the disk.
+
+## Library: uploads, versions, labels, notes and collections
+
+```
+POST /api/repositories/upload?name=shop.zip   body: the raw .zip (Content-Type: application/zip)
+  → streamed to artifacts/uploads/incoming-*.zip, stopped at MAX_UPLOAD_BYTES
+  → saved_repositories (source_type "zip") + repository_analyses (queued)
+        ↓ the same background job as GitHub imports, without the fetching step
+  extracting  extract_zip → the same per-file checks as tar.gz → artifacts/<analysis>/source
+  analyzing, indexing as usual; the uploaded file is deleted in every outcome
+```
+
+| Concern | Decision |
+|---|---|
+| Upload size | The ZIP is the raw request body, read in chunks and written as it arrives, so an oversized upload is refused at the limit. A multipart form would be parsed (and spooled to disk) before the endpoint could check the size. A declared `Content-Length` over the limit is refused before reading anything, and the page checks the size first too, because browsers report a refused upload as a network error. |
+| ZIP safety | Entries go through the same checks as the tarball: no `..`, absolute or drive-letter paths, size limits, secret redaction. ZIP-specific: symlinks and devices (from the Unix mode in `external_attr`) and encrypted entries are skipped; the declared sizes are summed against the scan limit, and `zipfile` never returns more than the declared size, which bounds zip bombs; a repeated path keeps the first copy. Only a file starting with a ZIP signature is accepted. |
+| Versions | A refresh adds a version. The API returns both `latest_analysis` (possibly still running or failed) and `current_analysis`, the newest completed one, which every tab uses. So a running or failed refresh never hides the previous version. |
+| Disk space | When a version completes, older versions lose their source snapshot, FAISS index and code chunks (`source_removed`), but keep their rows and file lists. |
+| What changed | Each stored file now has a SHA-256 of its stored text. Comparing two versions' file lists gives added, removed and modified files; versions from before hashes existed fall back to comparing sizes and say so. Technologies and dependencies (with version specifiers) are compared by name. |
+| Labels | A Postgres `text[]` column on `saved_repositories`, cleaned up on save (trimmed, duplicates ignoring case removed, at most 10 of 40 characters). Filtering happens in the browser, since a library holds tens of repositories, not thousands. |
+| Notes | `repository_notes` belong to the repository, not to an analysis, so they survive refreshes. A note may name a file and line; after a refresh that code may have moved, and the link is still offered. |
+| Collections | `collections` (unique name per user) and the join table `collection_repositories`. Adding is idempotent (`ON CONFLICT DO NOTHING`); someone else's repository cannot be added. Deleting a collection keeps its repositories. |
+| Deleting | Refused while an analysis runs (its job would write files after the rows are gone). Otherwise the database cascades to every dependent row, then each version's files and upload are removed from disk. The AI usage log is kept, so deleting does not give back the daily allowance. |
 
 ## Static analysis
 
@@ -224,8 +248,8 @@ GET endpoint every two seconds while the status is `pending`.
 
 Implemented so far: `users`, `saved_repositories`, `repository_analyses`,
 `analysis_files`, `code_symbols`, `code_imports`, `dependencies`, `ai_explanations`,
-`ai_requests`, `search_indexes`, `code_chunks`, `chat_sessions`, `chat_messages`. The rest
-is planned.
+`ai_requests`, `search_indexes`, `code_chunks`, `chat_sessions`, `chat_messages`,
+`repository_notes`, `collections`, `collection_repositories`. The rest is planned.
 
 ```
 users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< analysis_files ──< code_symbols
@@ -243,7 +267,9 @@ users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< an
 
 - `saved_repositories` has `UNIQUE(user_id, source_key)` to prevent duplicates.
 - Each `repository_analyses` row is one version of an analysis; refreshing creates a new
-  version rather than overwriting.
+  version rather than overwriting. Older versions keep their rows and file lists, but not
+  their stored files (`source_removed`).
+- `analysis_files.content_hash` (SHA-256 of the stored text) is what version comparisons use.
 - Every user-owned lookup filters by `user_id`. Requests for another user's records
   return 404, so the API does not reveal that they exist.
 - Large artifacts (source snapshots, FAISS indexes) live on disk, referenced by path.

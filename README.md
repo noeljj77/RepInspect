@@ -7,12 +7,14 @@ technologies, and answers questions about the implementation with references to 
 exact files and lines. It then turns the codebase into interview preparation: a
 project report, repository-specific questions and a mock interview with feedback.
 
-> Status: early development. User accounts, GitHub import, static code analysis, AI
-> explanations and chat are in place: save a public repository, browse its files with
-> an outline of every function and class, see its dependencies, frameworks and most
-> important files, get an overview and file explanations, and ask questions whose
-> answers quote the exact lines they rely on. Interview features are being built
-> milestone by milestone (see [docs/architecture.md](docs/architecture.md)).
+> Status: early development. User accounts, GitHub and ZIP import, static code
+> analysis, AI explanations, chat and a personal library are in place: save a public
+> repository or upload a project, browse its files with an outline of every function
+> and class, see its dependencies, frameworks and most important files, get an overview
+> and file explanations, ask questions whose answers quote the exact lines they rely on,
+> and organise it all with labels, notes, collections and version history. Interview
+> features are being built milestone by milestone (see
+> [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
 
@@ -116,6 +118,23 @@ When the import finishes you get three views:
 
 Python is parsed with the standard library's `ast` module; JavaScript, TypeScript and
 Java with Tree-sitter. Code is only parsed, never run.
+
+## Your library
+
+- **Upload a ZIP** of a project instead of a GitHub link (up to 50 MB). A single
+  top-level folder, as in GitHub's "Download ZIP", is dropped. The upload goes through
+  the same safety checks as a GitHub download and is deleted once it is unpacked.
+- **Refresh** a GitHub repository to analyze its latest commit, or upload a new ZIP of
+  an uploaded project. Each refresh is a new version. The previous version stays on
+  screen until the new one is ready, and a failed refresh keeps it too.
+- **History** lists every version and what changed since the one before: files added,
+  changed and removed (compared by content hash), technologies, and dependency versions.
+  Older versions keep their file list but give back the disk space of their files.
+- **Labels** (up to 10 per repository) and **collections** (named groups, for example
+  one per interview) organise the library. The dashboard can search and filter by both.
+- **Notes** belong to a repository and survive refreshes. A note can point at a file and
+  line: open a file, pick a line, and write the note next to the code.
+- **Delete** removes a repository with everything stored for it, on disk too.
 
 ## AI explanations
 
