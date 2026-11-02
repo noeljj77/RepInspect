@@ -1,6 +1,7 @@
 import uuid
 
 from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -25,3 +26,11 @@ class AnalysisFile(Base):
     line_count: Mapped[int | None]
     # None means the file was stored and can be read; otherwise why it was left out.
     skipped_reason: Mapped[str | None] = mapped_column(String(30))
+
+    # --- static analysis results ---
+    # How useful the file is for understanding the repository, and why (plain sentences).
+    importance_score: Mapped[int] = mapped_column(default=0, server_default="0")
+    importance_reasons: Mapped[list | None] = mapped_column(JSONB)
+    symbol_count: Mapped[int] = mapped_column(default=0, server_default="0")
+    # The parser could not read the whole file (syntax error or unsupported syntax).
+    parse_error: Mapped[bool] = mapped_column(default=False, server_default="false")

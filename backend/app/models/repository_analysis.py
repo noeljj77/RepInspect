@@ -14,12 +14,18 @@ class AnalysisStatus(StrEnum):
     QUEUED = "queued"
     FETCHING = "fetching"  # talking to GitHub, downloading the archive
     EXTRACTING = "extracting"  # unpacking, filtering and storing files
+    ANALYZING = "analyzing"  # parsing code, reading dependencies, detecting frameworks
     COMPLETED = "completed"
     FAILED = "failed"
 
 
 # Statuses where a background job still owns the analysis.
-IN_PROGRESS_STATUSES = (AnalysisStatus.QUEUED, AnalysisStatus.FETCHING, AnalysisStatus.EXTRACTING)
+IN_PROGRESS_STATUSES = (
+    AnalysisStatus.QUEUED,
+    AnalysisStatus.FETCHING,
+    AnalysisStatus.EXTRACTING,
+    AnalysisStatus.ANALYZING,
+)
 
 
 class RepositoryAnalysis(Base):
@@ -48,6 +54,11 @@ class RepositoryAnalysis(Base):
     github_metadata: Mapped[dict | None] = mapped_column(JSONB)
     # Bytes of code per language, as reported by GitHub.
     languages: Mapped[dict | None] = mapped_column(JSONB)
+
+    # Frameworks and tools found, each with the evidence for it (see services/analysis).
+    technologies: Mapped[list | None] = mapped_column(JSONB)
+    # Per-language file/line counts and totals (symbols, imports, dependencies, ...).
+    code_stats: Mapped[dict | None] = mapped_column(JSONB)
 
     readme_path: Mapped[str | None] = mapped_column(String(255))
     readme_text: Mapped[str | None] = mapped_column(Text)

@@ -2,6 +2,7 @@
 
 from app.db.base import Base
 from app.models.analysis_file import AnalysisFile
+from app.models.code_analysis import CodeImport, CodeSymbol, ProjectDependency
 from app.models.repository_analysis import (
     IN_PROGRESS_STATUSES,
     AnalysisStatus,
@@ -15,6 +16,9 @@ __all__ = [
     "AnalysisFile",
     "AnalysisStatus",
     "Base",
+    "CodeImport",
+    "CodeSymbol",
+    "ProjectDependency",
     "RepositoryAnalysis",
     "SavedRepository",
     "User",
