@@ -6,6 +6,7 @@ import type {
   OverviewContent,
   TechnologiesContent,
 } from '../api/ai'
+import type { AnswerDetails, Chat, ChatMessage, SearchIndex } from '../api/chat'
 import type {
   AnalysisDetail,
   AnalysisSummary,
@@ -307,5 +308,74 @@ export function fileExplanationContent(): FileExplanationContent {
     ],
     ungrounded_paths: [],
     removed_citations: 0,
+  }
+}
+
+export function searchIndex(overrides: Partial<SearchIndex> = {}): SearchIndex {
+  return {
+    status: 'ready',
+    chunk_count: 1966,
+    chunks_embedded: 1966,
+    truncated: false,
+    model: 'BAAI/bge-small-en-v1.5',
+    error_code: null,
+    error_message: null,
+    completed_at: '2026-11-02T10:02:00Z',
+    ...overrides,
+  }
+}
+
+export const CHAT_ID = '55555555-5555-5555-5555-555555555555'
+
+export function question(content = 'How is the app started?', overrides: Partial<ChatMessage> = {}): ChatMessage {
+  return {
+    id: 'q1',
+    role: 'user',
+    status: 'completed',
+    content,
+    details: null,
+    error_code: null,
+    error_message: null,
+    model: null,
+    created_at: '2026-11-02T10:05:00Z',
+    completed_at: null,
+    ...overrides,
+  }
+}
+
+export function reply(overrides: Partial<ChatMessage> = {}, details: Partial<AnswerDetails> = {}): ChatMessage {
+  return {
+    id: 'a1',
+    role: 'assistant',
+    status: 'completed',
+    content: 'The `Flask` class is the application [1].\n\n- It is created in `app.py` [1]\n- Settings come from the environment',
+    details: {
+      answerable: true,
+      citations: [{ path: 'src/flask/app.py', start_line: 5, end_line: 6, quote: 'class Flask:\n    def run(self): ...' }],
+      removed_citations: 0,
+      ungrounded_paths: [],
+      sources: [
+        { path: 'src/flask/app.py', start_line: 5, end_line: 6, symbol: 'Flask', matched_by: ['meaning', 'name'] },
+        { path: 'README.md', start_line: 1, end_line: 3, symbol: 'Flask', matched_by: ['keywords'] },
+      ],
+      ...details,
+    },
+    error_code: null,
+    error_message: null,
+    model: 'gemini-test',
+    created_at: '2026-11-02T10:05:00Z',
+    completed_at: '2026-11-02T10:05:04Z',
+    ...overrides,
+  }
+}
+
+export function chat(messages: ChatMessage[] = [question(), reply()], overrides: Partial<Chat> = {}): Chat {
+  return {
+    id: CHAT_ID,
+    title: messages[0]?.content ?? 'New conversation',
+    created_at: '2026-11-02T10:05:00Z',
+    updated_at: '2026-11-02T10:05:04Z',
+    messages,
+    ...overrides,
   }
 }
