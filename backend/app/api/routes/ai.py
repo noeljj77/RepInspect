@@ -1,10 +1,9 @@
 """AI explanations: request one, then poll for it."""
 
-from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -14,14 +13,13 @@ from app.db.session import get_db
 from app.models import (
     AiExplanation,
     AiKind,
-    AiRequest,
     AiStatus,
     AnalysisFile,
     RepositoryAnalysis,
-    SavedRepository,
     User,
 )
 from app.schemas.ai import ExplanationOut
+from app.services.ai import limits
 from app.services.ai.jobs import run_ai_job
 from app.worker.runner import JobRunner, get_job_runner
 
@@ -75,17 +73,6 @@ def _find(db: Session, analysis: RepositoryAnalysis, kind: str, path: str) -> Ai
     )
 
 
-def _user_ai_rows(user: User):
-    """Counts explanations that belong to this user's repositories."""
-    return (
-        select(func.count())
-        .select_from(AiExplanation)
-        .join(RepositoryAnalysis, RepositoryAnalysis.id == AiExplanation.analysis_id)
-        .join(SavedRepository, SavedRepository.id == RepositoryAnalysis.saved_repository_id)
-        .where(SavedRepository.user_id == user.id)
-    )
-
-
 @router.get("/{kind}", response_model=ExplanationOut)
 def get_explanation(
     kind: Kind,
@@ -124,37 +111,17 @@ def request_explanation(
     if existing is not None and existing.status == AiStatus.PENDING:
         raise HTTPException(status.HTTP_409_CONFLICT, detail="This is already being generated")
 
-    # Free AI quotas are small, so each person gets a daily allowance and a cap on
-    # simultaneous requests.
-    since = datetime.now(UTC) - timedelta(days=1)
-    used_today = (
-        db.scalar(
-            select(func.count())
-            .select_from(AiRequest)
-            .where(AiRequest.user_id == user.id, AiRequest.created_at >= since)
-        )
-        or 0
-    )
-    if used_today >= settings.max_ai_requests_per_user_per_day:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"You have reached today's limit of {settings.max_ai_requests_per_user_per_day} "
-            "AI requests. Try again tomorrow.",
-        )
-    running = db.scalar(_user_ai_rows(user).where(AiExplanation.status == AiStatus.PENDING)) or 0
-    if running >= settings.max_active_ai_jobs_per_user:
-        raise HTTPException(
-            status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=f"{running} of your AI {'request is' if running == 1 else 'requests are'} "
-            "already running. Wait for one to finish.",
-        )
+    try:
+        limits.check_allowance(db, user)
+    except limits.AiLimitReached as error:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, detail=error.message) from None
 
     if existing is not None:
         db.delete(existing)
         db.flush()
     record = AiExplanation(analysis_id=analysis.id, kind=kind, target_path=target)
     db.add(record)
-    db.add(AiRequest(user_id=user.id))
+    limits.record_request(db, user)
     try:
         db.commit()
     except IntegrityError:
