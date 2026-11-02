@@ -34,3 +34,5 @@ class AnalysisFile(Base):
     symbol_count: Mapped[int] = mapped_column(default=0, server_default="0")
     # The parser could not read the whole file (syntax error or unsupported syntax).
     parse_error: Mapped[bool] = mapped_column(default=False, server_default="false")
+    # SHA-256 of the stored text. Compared between versions to find changed files.
+    content_hash: Mapped[str | None] = mapped_column(String(64))

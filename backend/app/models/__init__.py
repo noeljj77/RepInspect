@@ -6,6 +6,7 @@ from app.models.ai_request import AiRequest
 from app.models.analysis_file import AnalysisFile
 from app.models.chat import ChatMessage, ChatSession, MessageStatus
 from app.models.code_analysis import CodeImport, CodeSymbol, ProjectDependency
+from app.models.library import Collection, CollectionRepository, RepositoryNote
 from app.models.repository_analysis import (
     IN_PROGRESS_STATUSES,
     AnalysisStatus,
@@ -29,10 +30,13 @@ __all__ = [
     "CodeChunk",
     "CodeImport",
     "CodeSymbol",
+    "Collection",
+    "CollectionRepository",
     "IndexStatus",
     "MessageStatus",
     "ProjectDependency",
     "RepositoryAnalysis",
+    "RepositoryNote",
     "SavedRepository",
     "SearchIndex",
     "User",

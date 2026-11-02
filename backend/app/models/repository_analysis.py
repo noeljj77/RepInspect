@@ -70,6 +70,9 @@ class RepositoryAnalysis(Base):
     redaction_count: Mapped[int] = mapped_column(default=0)
     # True when a size or file-count limit stopped the import early.
     truncated: Mapped[bool] = mapped_column(Boolean, default=False)
+    # True once a newer version replaced this one and its stored files were deleted to
+    # save space. The record and its file list stay, for refresh history.
+    source_removed: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=sql_func.now()
