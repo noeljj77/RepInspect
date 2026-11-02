@@ -74,6 +74,7 @@ later migrations.
 | `src/hooks/` | Shared hooks, such as `useCurrentUser` |
 | `src/components/auth/` | Route guards and the login/register page shell |
 | `src/components/ui/` | Small shared pieces (button styles, logo) |
+| `src/components/ai/` | AI explanation panel (request, wait, failure, regenerate), findings and citations |
 | `src/components/layout/` | Public header and authenticated app shell |
 | `src/pages/` | One component per route |
 
@@ -188,10 +189,40 @@ files), `dependencies`, per-file columns on `analysis_files`, and `technologies`
 `code_stats` on the analysis. The API exposes them as `/files`, `/files/content` (with
 symbols, imports and importers), `/dependencies` and `/symbols?q=`.
 
+## AI explanations
+
+```
+POST /ai/{kind}  →  row in ai_explanations (pending)  →  background job
+                                                          │
+  facts from static analysis + numbered excerpts  ────────┤  evidence pack (context.py)
+  fenced with a random per-request marker                 │
+                                                          ▼
+                                  provider (llm/)  →  JSON matching a schema
+                                                          │
+                                  grounding.py: check every citation and name
+                                                          ▼
+                       only the checked result is stored  →  GET /ai/{kind} (polled)
+```
+
+Kinds are `overview`, `technologies` and `file` (with `?path=`). The frontend polls the
+GET endpoint every two seconds while the status is `pending`.
+
+| Concern | Decision |
+|---|---|
+| Provider layer | `services/llm/` defines a small `LLMProvider` interface (structured JSON in, Pydantic model out) with one implementation, Gemini over REST. Features never import Gemini directly, so another provider is one new module plus a setting. Errors are mapped to a few typed exceptions (busy, rate limited, quota used up, blocked, bad response) with a message a person can act on. |
+| Retries | Temporary errors (503 "busy", 429 per-minute limits) are retried with backoff; a used-up daily quota is not. A reply that does not match the schema gets one correction retry. Prompts and keys are never logged. |
+| What the model sees | An evidence pack (`services/ai/context.py`): technologies with their evidence, dependencies, folder structure, detected routes, important files with reasons, and numbered excerpts of the top files, within a character budget (`AI_CONTEXT_CHARS`). Skipped and sensitive files are never included, and secrets were already redacted at import. |
+| Prompt injection | Repository text is untrusted. Every data block is fenced by markers containing a random value chosen per request, which text inside a file cannot predict. The system prompt says to treat fenced text as data only. A test repository with fake markers and "ignore your instructions" text did not change the output. |
+| Grounding | `services/ai/grounding.py` checks each citation: the file must exist and the quoted text must really appear in it (whitespace-insensitive). Line numbers are replaced by where the quote really is. Unconfirmed citations are dropped and counted; a finding with none left is marked `verified: false` and shown as inference. File paths mentioned that are not in the repository are listed, and invented technologies or symbols are removed. |
+| Honest gaps | Each overview section has `determined`. When the analyzed files do not answer it (a library has no frontend), the UI says so instead of showing a guess. |
+| General knowledge | Technology explanations (what it is, alternatives, trade-offs) are not about this repository, so they are shown in the "AI suggestion" style, apart from the evidence, and the reason a project chose it is labelled as not documented. |
+| Cost and abuse | Each request is logged in `ai_requests`, and the daily allowance counts that log, so regenerating or deleting a repository does not reset it. A per-user cap limits requests running at once. Jobs interrupted by a restart are marked failed on startup. |
+
 ## Data model
 
 Implemented so far: `users`, `saved_repositories`, `repository_analyses`,
-`analysis_files`, `code_symbols`, `code_imports`, `dependencies`. The rest is planned.
+`analysis_files`, `code_symbols`, `code_imports`, `dependencies`, `ai_explanations`,
+`ai_requests`. The rest is planned.
 
 ```
 users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< analysis_files ──< code_symbols
@@ -202,6 +233,7 @@ users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< an
        │                       │                         └─< interview_reports ──< interview_questions
        │                       ├─< repository_notes
        │                       └─< mock_interview_sessions ──< mock_interview_turns
+       ├─< ai_requests
        └─< collections ──< collection_repositories >── saved_repositories
 ```
 
@@ -211,6 +243,9 @@ users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< an
 - Every user-owned lookup filters by `user_id`. Requests for another user's records
   return 404, so the API does not reveal that they exist.
 - Large artifacts (source snapshots, FAISS indexes) live on disk, referenced by path.
+- `ai_explanations` has `UNIQUE(analysis_id, kind, target_path)`: one explanation per
+  analysis, kind and file. Regenerating replaces it. A new analysis starts without
+  explanations, since the code may have changed.
 
 ## Retrieval-augmented generation (planned)
 

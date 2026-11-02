@@ -7,11 +7,12 @@ technologies, and answers questions about the implementation with references to 
 exact files and lines. It then turns the codebase into interview preparation: a
 project report, repository-specific questions and a mock interview with feedback.
 
-> Status: early development. User accounts, GitHub import and static code analysis
-> are in place: save a public repository, browse its files with an outline of every
-> function and class, see its dependencies, frameworks and most important files. AI
-> explanations, chat and interview features are being built milestone by milestone
-> (see [docs/architecture.md](docs/architecture.md)).
+> Status: early development. User accounts, GitHub import, static code analysis and
+> AI explanations are in place: save a public repository, browse its files with an
+> outline of every function and class, see its dependencies, frameworks and most
+> important files, and get an overview and file explanations that quote the code they
+> rely on. Chat and interview features are being built milestone by milestone (see
+> [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
 
@@ -20,7 +21,7 @@ project report, repository-specific questions and a mock interview with feedback
 | Frontend | React, TypeScript, Vite, Tailwind CSS, React Router, TanStack Query, Lucide |
 | Backend | Python 3.11, FastAPI, Pydantic, SQLAlchemy 2, Alembic |
 | Database | PostgreSQL 17 |
-| AI (planned) | Sentence Transformers, FAISS, configurable LLM provider |
+| AI | Google Gemini behind a swappable provider layer; Sentence Transformers and FAISS (planned) |
 | Code analysis | Python `ast`, Tree-sitter (JavaScript, TypeScript, Java), GitHub REST API |
 | Testing | Pytest, Vitest, React Testing Library |
 
@@ -115,6 +116,38 @@ When the import finishes you get three views:
 
 Python is parsed with the standard library's `ast` module; JavaScript, TypeScript and
 Java with Tree-sitter. Code is only parsed, never run.
+
+## AI explanations
+
+With an AI key configured, each analyzed repository gets three kinds of explanation,
+generated on request:
+
+- **How this project works** (Overview tab): ten short sections covering purpose,
+  architecture, frontend, backend, data flow, important modules, how it runs and key
+  decisions.
+- **Technology explanations** (Overview tab): what each detected framework or library
+  is, its strengths, alternatives and trade-offs. This is general knowledge and is shown
+  apart from the evidence found in the code.
+- **Explain this file** (Files tab): purpose, inputs and outputs, and the key functions
+  and classes, each a link to its line.
+
+The model only sees facts from the static analysis plus excerpts of the most important
+files, never the whole repository. Every quote it gives is checked against the real
+file before anything is shown. Claims backed by a confirmed quote are highlighted in
+amber with a link to the lines; anything the code does not confirm is marked as
+inference, and parts the analyzed files do not answer say so instead of guessing.
+
+### Setting up a Gemini key
+
+1. Create a free key at https://aistudio.google.com/apikey.
+2. Add it to `backend/.env` as `GEMINI_API_KEY=...` and restart the backend.
+
+Without a key everything else works and the AI buttons explain that AI is not set up.
+The free tier has small daily quotas and is sometimes busy, so the server retries
+temporary errors, and each user gets a daily allowance (40 requests by default) with at
+most two running at once. These limits are in `.env.example`. On the free tier Google
+may use the prompts to improve its products, so do not analyze code you are not allowed
+to share.
 
 ## Running tests
 
