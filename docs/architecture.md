@@ -48,7 +48,9 @@ Repository code is never executed.
 | `app/models/` | SQLAlchemy models |
 | `app/schemas/` | Pydantic request and response models |
 | `app/api/` | Routers and shared dependencies |
-| `app/services/` | Ingestion, analysis, RAG, LLM and feature services |
+| `app/services/` | `ingestion/` (GitHub client, URL parsing, safe extraction, filtering, secret redaction, pipeline), `analysis/` (languages; parsers arrive in Milestone 4), `repositories.py` (the library), later RAG and LLM |
+| `app/storage/` | Artifact storage for imported source snapshots |
+| `app/worker/` | Background job runner |
 | `alembic/` | Database migrations |
 
 ### Why synchronous SQLAlchemy
@@ -115,7 +117,42 @@ the answer. `RequireAuth` wraps the app shell and redirects guests to `/login`;
 `GuestOnly` sends logged-in users away from the login and register pages. Logging in or
 out clears the whole query cache so one account's data is never shown to the next.
 
-## Data model (planned)
+## GitHub ingestion
+
+```
+POST /api/repositories {url}
+  → parse_github_url         strict owner/repo extraction; the user's URL is never requested
+  → saved_repositories       one row per user + source (unique constraint prevents duplicates)
+  → repository_analyses      new version, status "queued"; job handed to the thread pool
+        ↓ background job (services/ingestion/pipeline.py)
+  fetching    GET /repos/{o}/{r}              details; private repos refused
+              GET /repos/{o}/{r}/commits/{b}  full commit SHA (409 = empty repository)
+              GET /repos/{o}/{r}/languages    best effort
+              GET /repos/{o}/{r}/tarball/{sha} one download instead of one call per file
+  extracting  safe extraction → filter → redact → write to artifacts/<analysis>/source
+  completed   analysis_files rows + README + counts, or failed with a user-readable message
+```
+
+Four API calls per analysis keeps the unauthenticated limit (60 per hour) workable.
+
+| Concern | How it is handled |
+|---|---|
+| SSRF | Requests only go to `api.github.com` and `codeload.github.com` over https. Redirects are followed by hand and every hop is checked, so a redirect to an internal address is never requested. The token is only sent to `api.github.com`. |
+| Private code | Repositories that are not public are refused even if a configured token could read them. |
+| Archive attacks | One extractor (`archive.py`) rejects `..`, absolute and drive-letter paths, never creates symlinks or special files, skips names unsafe on Windows, and counts bytes read to stop expansion bombs. It is written to be reused for ZIP uploads. |
+| Resource limits | Download size, bytes scanned, file count, per-file size and total size are all capped. Hitting a cap ends the import and marks the analysis as truncated. |
+| Secrets | Files such as `.env`, keys and credentials are never stored. Token formats and `password = "..."` style values in other files are replaced with `[REDACTED]` before writing, keeping line numbers intact. |
+| Timeouts and failures | Every request has a timeout. Not found, rate limit (with reset time), empty repository, too large, GitHub down and unsafe archive each produce a specific message. Unexpected errors are logged and shown generically. |
+| Jobs | Status lives in Postgres. Analyses left running by a previous server process are marked failed at startup. A user may run at most 3 at a time. |
+| Storage | Postgres holds records; file bytes live under `artifacts/<analysis id>/source/` behind `storage/artifacts.py`. The snapshot is written to a temporary folder and renamed into place, so readers never see a partial import. |
+
+Files are served only if they are recorded in `analysis_files` as stored, and the path
+is also checked to stay inside the snapshot, so a crafted path never reaches the disk.
+
+## Data model
+
+Implemented so far: `users`, `saved_repositories`, `repository_analyses`,
+`analysis_files`. The rest is planned.
 
 ```
 users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< analysis_files ──< code_symbols

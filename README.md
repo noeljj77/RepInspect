@@ -7,10 +7,10 @@ technologies, and answers questions about the implementation with references to 
 exact files and lines. It then turns the codebase into interview preparation: a
 project report, repository-specific questions and a mock interview with feedback.
 
-> Status: early development. The foundation and user accounts (register, log in,
-> log out, protected pages) are in place; repository analysis, chat and interview
-> features are being built milestone by milestone (see
-> [docs/architecture.md](docs/architecture.md)).
+> Status: early development. User accounts and GitHub repository import are in
+> place: you can save a public repository to your library and see its details,
+> languages and README. Code analysis, chat and interview features are being built
+> milestone by milestone (see [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
 
@@ -85,6 +85,21 @@ npm run dev
 
 Open http://localhost:5173. The Vite dev server forwards `/api` requests to the backend,
 so both run under one origin in the browser.
+
+## Analyzing GitHub repositories
+
+Log in, paste a public repository URL on the dashboard and press Analyze. The backend
+reads the repository in the background and the page shows progress.
+
+- GitHub allows **60 API requests per hour** without a token, shared by everyone on
+  your network, and each analysis uses 4. When the limit is hit the page says when to
+  try again. For regular use, create a token with no extra permissions at
+  https://github.com/settings/tokens and set `GITHUB_TOKEN` in `backend/.env`.
+- Only public repositories are supported. Private ones look the same as missing ones.
+- Repository code is only ever read as text, never executed. Files such as `.env` and
+  private keys are never stored, and secret-looking values in source files are
+  replaced with `[REDACTED]`.
+- Very large repositories are cut off at the limits in `.env.example` and flagged.
 
 ## Running tests
 
