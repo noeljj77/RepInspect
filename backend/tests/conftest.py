@@ -9,6 +9,11 @@ ARTIFACT_ROOT = Path(tempfile.mkdtemp(prefix="repinspect-test-artifacts-"))
 os.environ["APP_ENV"] = "test"
 os.environ["JWT_SECRET"] = "test-secret-only-used-by-the-test-suite-0123456789"
 os.environ["ARTIFACT_DIR"] = str(ARTIFACT_ROOT)
+# Tests must never use real credentials from backend/.env: no GitHub token, and AI off
+# unless a test switches it on with the `llm` fixture (which uses a fake model).
+os.environ["GITHUB_TOKEN"] = ""
+os.environ["GEMINI_API_KEY"] = ""
+os.environ["LLM_PROVIDER"] = "none"
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",
     "postgresql+psycopg://repinspect:repinspect@localhost:5433/repinspect_test",
@@ -17,15 +22,18 @@ os.environ["DATABASE_URL"] = os.environ.get(
 import pytest  # noqa: E402
 from alembic.config import Config  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from pydantic import SecretStr  # noqa: E402
 from sqlalchemy import text  # noqa: E402
 
 from alembic import command  # noqa: E402
+from app.core.config import get_settings  # noqa: E402
 from app.db.session import engine  # noqa: E402
 from app.main import create_app  # noqa: E402
+from app.services.ai import jobs as ai_jobs  # noqa: E402
 from app.services.ingestion import pipeline  # noqa: E402
 from app.services.ingestion.github_client import GitHubClient  # noqa: E402
 from app.worker.runner import get_job_runner  # noqa: E402
-from tests.fakes import FakeGitHub, InlineRunner  # noqa: E402
+from tests.fakes import FakeGitHub, FakeLLM, InlineRunner  # noqa: E402
 
 ALEMBIC_INI = Path(__file__).resolve().parent.parent / "alembic.ini"
 
@@ -82,4 +90,14 @@ def github(monkeypatch) -> FakeGitHub:
         "create_github_client",
         lambda: GitHubClient.from_settings(transport=fake.transport()),
     )
+    return fake
+
+
+@pytest.fixture
+def llm(monkeypatch) -> FakeLLM:
+    """Switch AI on, with a scripted fake model instead of Gemini."""
+    fake = FakeLLM()
+    monkeypatch.setattr(ai_jobs, "create_provider", lambda: fake)
+    monkeypatch.setattr(get_settings(), "llm_provider", "gemini")
+    monkeypatch.setattr(get_settings(), "gemini_api_key", SecretStr("test-key"))
     return fake

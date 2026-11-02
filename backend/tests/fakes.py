@@ -4,8 +4,11 @@ import io
 import re
 import tarfile
 import time
+from types import SimpleNamespace
 
 import httpx
+
+from app.services.llm.base import LLMResult
 
 SHA = "1234567890abcdef1234567890abcdef12345678"
 
@@ -154,3 +157,35 @@ class InlineRunner:
 
     def shutdown(self) -> None:
         pass
+
+
+class FakeLLM:
+    """A language model that answers from a script, and records every prompt it was given.
+
+    `respond(schema, value)` sets what to return for a schema: a model instance, an
+    exception to raise, or a function taking (system, prompt) and returning either.
+    """
+
+    model = "fake-model"
+
+    def __init__(self) -> None:
+        self.calls: list[SimpleNamespace] = []
+        self._answers: dict[type, object] = {}
+        self.closed = False
+
+    def respond(self, schema: type, value: object) -> None:
+        self._answers[schema] = value
+
+    def generate_structured(
+        self, *, system, prompt, schema, max_output_tokens=4096, temperature=0.2
+    ):
+        self.calls.append(SimpleNamespace(system=system, prompt=prompt, schema=schema))
+        value = self._answers[schema]
+        if callable(value):
+            value = value(system, prompt)
+        if isinstance(value, Exception):
+            raise value
+        return LLMResult(value, self.model, 120, 60)
+
+    def close(self) -> None:
+        self.closed = True
