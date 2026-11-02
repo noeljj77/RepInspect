@@ -7,10 +7,11 @@ technologies, and answers questions about the implementation with references to 
 exact files and lines. It then turns the codebase into interview preparation: a
 project report, repository-specific questions and a mock interview with feedback.
 
-> Status: early development. User accounts and GitHub repository import are in
-> place: you can save a public repository to your library and see its details,
-> languages and README. Code analysis, chat and interview features are being built
-> milestone by milestone (see [docs/architecture.md](docs/architecture.md)).
+> Status: early development. User accounts, GitHub import and static code analysis
+> are in place: save a public repository, browse its files with an outline of every
+> function and class, see its dependencies, frameworks and most important files. AI
+> explanations, chat and interview features are being built milestone by milestone
+> (see [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
 
@@ -20,7 +21,7 @@ project report, repository-specific questions and a mock interview with feedback
 | Backend | Python 3.11, FastAPI, Pydantic, SQLAlchemy 2, Alembic |
 | Database | PostgreSQL 17 |
 | AI (planned) | Sentence Transformers, FAISS, configurable LLM provider |
-| Code analysis (planned) | Python `ast`, Tree-sitter, GitHub REST API |
+| Code analysis | Python `ast`, Tree-sitter (JavaScript, TypeScript, Java), GitHub REST API |
 | Testing | Pytest, Vitest, React Testing Library |
 
 ## Project layout
@@ -100,6 +101,20 @@ reads the repository in the background and the page shows progress.
   private keys are never stored, and secret-looking values in source files are
   replaced with `[REDACTED]`.
 - Very large repositories are cut off at the limits in `.env.example` and flagged.
+
+When the import finishes you get three views:
+
+- **Overview**: language breakdown (by lines of code), statistics, the frameworks and
+  libraries detected (each with the file and line that proves it), and the files most
+  worth reading first, with the reason for each.
+- **Files**: a file tree with search, a code viewer, an outline of the functions and
+  classes in each file, and its imports. Imports of other files in the repository are
+  links, and every file lists the files that import it.
+- **Dependencies**: everything declared in `requirements.txt`, `pyproject.toml`,
+  `package.json`, `pom.xml` and Gradle files, grouped by manifest and filterable.
+
+Python is parsed with the standard library's `ast` module; JavaScript, TypeScript and
+Java with Tree-sitter. Code is only parsed, never run.
 
 ## Running tests
 

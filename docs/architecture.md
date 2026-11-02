@@ -48,7 +48,7 @@ Repository code is never executed.
 | `app/models/` | SQLAlchemy models |
 | `app/schemas/` | Pydantic request and response models |
 | `app/api/` | Routers and shared dependencies |
-| `app/services/` | `ingestion/` (GitHub client, URL parsing, safe extraction, filtering, secret redaction, pipeline), `analysis/` (languages; parsers arrive in Milestone 4), `repositories.py` (the library), later RAG and LLM |
+| `app/services/` | `ingestion/` (GitHub client, URL parsing, safe extraction, filtering, secret redaction, pipeline), `analysis/` (static analysis: parsers, dependencies, technologies, relationships, importance), `repositories.py` (the library), later RAG and LLM |
 | `app/storage/` | Artifact storage for imported source snapshots |
 | `app/worker/` | Background job runner |
 | `alembic/` | Database migrations |
@@ -149,10 +149,49 @@ Four API calls per analysis keeps the unauthenticated limit (60 per hour) workab
 Files are served only if they are recorded in `analysis_files` as stored, and the path
 is also checked to stay inside the snapshot, so a crafted path never reaches the disk.
 
+## Static analysis
+
+Runs as the `analyzing` step of the import, as a pure function over the stored files
+(`services/analysis/runner.py`): no database, no network, nothing executed.
+
+```
+stored files ─┬─ parsers/        Python: ast.   JavaScript, TypeScript, Java: Tree-sitter
+              │                   → symbols (kind, qualified name, lines, signature, doc,
+              │                     decorators) and imports (module, names, line)
+              ├─ dependencies    requirements*.txt, pyproject.toml, package.json, pom.xml,
+              │                   build.gradle(.kts) → name, version, scope, file and line
+              ├─ relationships   resolves each import to a file in the repository
+              ├─ technologies    rule table + dependencies + external imports + file names
+              └─ importance      explainable score per file, with the reasons
+                                  → stats (languages by lines, symbol and import totals)
+```
+
+| Concern | Decision |
+|---|---|
+| Never run the code | `ast.parse` and Tree-sitter only build syntax trees. `setup.py` is not read at all, because its dependencies are code. XML with a DOCTYPE or entity declaration is refused. |
+| Why two parser technologies | `ast` is exact for Python and in the standard library. Tree-sitter keeps working on files with syntax errors and covers the other languages with one API. Adding a language means one parser module plus its grammar. |
+| Partial results | A file that does not parse is flagged (`parse_error`) and keeps whatever symbols were found. One broken file, manifest or parser bug never fails the import, and a failure of the whole analysis step still leaves a completed import without code insight. |
+| Symbols | Top-level definitions and class members, not nested functions. Python also finds definitions under `if TYPE_CHECKING:` and in `try`/`except` fallbacks. Line ranges include decorators. |
+| Import resolution | By path convention. Python modules are indexed under every suffix of their dotted path, so `app.core.config` resolves whether the package root is `backend/` or `src/`. Ties go to the nearest file. JavaScript and TypeScript handle relative paths, `index` files, `.js` written for `.ts`, and the `@/` alias. Java resolves `a.b.Class` to `a/b/Class.java`. Anything unresolved is treated as a library. Same-package references in Java are not visible. |
+| Evidence for every claim | A technology is reported only with evidence: the dependency and its line, an import, or a characteristic file. The dashboard links each piece of evidence to the file and line. |
+| Development-only technologies | A framework that is only a development dependency and only imported from test files (for example an Express server a library starts to test its HTTP client) is marked "development only" instead of being presented as part of the product. Test and build tools are not marked, since they are development tools by nature. |
+| Explainable importance | Entry points, configuration, manifests, how many files import it, and so on each add points and a plain-language reason. Tests are pushed down. There is no AI in this step. |
+
+Each import logs how long every stage took (GitHub calls, download, extraction, analysis,
+storage), which is how the slow bulk insert below was found. Bulk inserts use SQLAlchemy's
+batched `INSERT ... RETURNING`: the plain row-by-row path re-prepared the statement every
+time a nullable column (a docstring) flipped between NULL and text, taking 11 s for 1,400
+rows against 0.2 s batched. A typical repository now imports in about four seconds.
+
+Results are stored in `code_symbols`, `code_imports` (with `resolved_file_id` linking
+files), `dependencies`, per-file columns on `analysis_files`, and `technologies` and
+`code_stats` on the analysis. The API exposes them as `/files`, `/files/content` (with
+symbols, imports and importers), `/dependencies` and `/symbols?q=`.
+
 ## Data model
 
 Implemented so far: `users`, `saved_repositories`, `repository_analyses`,
-`analysis_files`. The rest is planned.
+`analysis_files`, `code_symbols`, `code_imports`, `dependencies`. The rest is planned.
 
 ```
 users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< analysis_files ──< code_symbols
