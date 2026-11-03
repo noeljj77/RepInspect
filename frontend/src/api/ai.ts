@@ -1,6 +1,6 @@
 import { apiFetch, apiPost } from './client'
 
-export type AiKind = 'overview' | 'technologies' | 'file'
+export type AiKind = 'overview' | 'technologies' | 'file' | 'report'
 
 /** "missing" means nobody has asked for this explanation yet. */
 export type AiStatus = 'missing' | 'pending' | 'completed' | 'failed'
@@ -70,10 +70,37 @@ export interface FileExplanationContent {
   removed_citations: number
 }
 
+export interface Decision {
+  /** The decision, backed by code when verified. */
+  finding: Finding
+  /** General knowledge, not taken from the repository. */
+  alternatives: string[]
+  trade_offs: string[]
+}
+
+/** A suggested next step: always an opinion. */
+export interface Improvement {
+  idea: string
+  reason: string
+}
+
+/** Notes for talking about the project in an interview. */
+export interface ReportContent {
+  pitch: string
+  problem: string
+  walkthrough: Finding[]
+  decisions: Decision[]
+  highlights: Finding[]
+  improvements: Improvement[]
+  ungrounded_paths: string[]
+  removed_citations: number
+}
+
 export interface ContentByKind {
   overview: OverviewContent
   technologies: TechnologiesContent
   file: FileExplanationContent
+  report: ReportContent
 }
 
 export interface Explanation<K extends AiKind = AiKind> {

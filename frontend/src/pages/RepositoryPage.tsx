@@ -95,6 +95,7 @@ function Tabs({ repository }: { repository: RepositoryDetail }) {
     { to: `${base}/files`, label: 'Files', count: repository.current_analysis?.file_count },
     { to: `${base}/dependencies`, label: 'Dependencies', count: totals?.dependencies },
     { to: `${base}/chat`, label: 'Chat' },
+    { to: `${base}/interview`, label: 'Interview' },
     { to: `${base}/notes`, label: 'Notes' },
     { to: `${base}/history`, label: 'History' },
   ]

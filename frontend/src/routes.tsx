@@ -12,6 +12,7 @@ import ChatTab from './pages/repository/ChatTab'
 import DependenciesTab from './pages/repository/DependenciesTab'
 import FilesTab from './pages/repository/FilesTab'
 import HistoryTab from './pages/repository/HistoryTab'
+import InterviewTab from './pages/repository/InterviewTab'
 import NotesTab from './pages/repository/NotesTab'
 import OverviewTab from './pages/repository/OverviewTab'
 
@@ -41,6 +42,7 @@ export const routes: RouteObject[] = [
               { path: 'files', element: <FilesTab /> },
               { path: 'dependencies', element: <DependenciesTab /> },
               { path: 'chat', element: <ChatTab /> },
+              { path: 'interview', element: <InterviewTab /> },
               { path: 'notes', element: <NotesTab /> },
               { path: 'history', element: <HistoryTab /> },
             ],
