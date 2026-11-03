@@ -65,6 +65,11 @@ class ImportantFile(BaseModel):
     reasons: list[str]
 
 
+class LanguageShare(BaseModel):
+    name: str
+    share: float  # of the lines of code, 0 to 1
+
+
 class RepositorySummary(BaseModel):
     id: uuid.UUID
     source_type: str
@@ -76,6 +81,9 @@ class RepositorySummary(BaseModel):
     description: str | None
     created_at: datetime
     latest_analysis: AnalysisSummary | None
+    # From the latest analysis, for the library list: the main languages and the size.
+    languages: list[LanguageShare] = []
+    code_lines: int | None = None
 
 
 class RepositoryDetail(BaseModel):

@@ -146,6 +146,20 @@ def add_repository(
     return _detail(db, repository)
 
 
+def _languages(
+    analysis: RepositoryAnalysis | None, limit: int = 3
+) -> tuple[list[dict], int | None]:
+    """The main programming languages by lines of code, and the total lines."""
+    stats = (analysis.code_stats or {}) if analysis else {}
+    rows = [r for r in stats.get("languages", []) if r.get("is_programming") and r.get("lines")]
+    total = sum(r["lines"] for r in rows)
+    if not total:
+        return [], None
+    rows.sort(key=lambda r: r["lines"], reverse=True)
+    shares = [{"name": r["name"], "share": round(r["lines"] / total, 3)} for r in rows[:limit]]
+    return shares, stats.get("totals", {}).get("code_lines", total)
+
+
 @router.get("", response_model=list[RepositorySummary])
 def list_repositories(
     user: User = Depends(get_current_user), db: Session = Depends(get_db)
@@ -158,12 +172,15 @@ def list_repositories(
     for repository in saved:
         analysis = latest.get(repository.id)
         description = (analysis.github_metadata or {}).get("description") if analysis else None
+        languages, code_lines = _languages(analysis)
         summaries.append(
             RepositorySummary.model_validate(
                 {
                     **_base(repository, memberships[repository.id]),
                     "description": description,
                     "latest_analysis": analysis,
+                    "languages": languages,
+                    "code_lines": code_lines,
                 },
                 from_attributes=True,
             )

@@ -554,3 +554,18 @@ def test_artifact_helpers_clean_up(github, user):
     assert not artifacts.source_dir(analysis_id).exists()
     shutil.rmtree(get_settings().artifact_dir, ignore_errors=True)
     get_settings().artifact_dir.mkdir(parents=True, exist_ok=True)
+
+
+def test_the_library_list_shows_the_main_languages_and_size(github, user):
+    github.files = {
+        "app.py": "x = 1\ny = 2\n",
+        "web/app.js": "let a = 1\n",
+        "README.md": "# Demo\n",
+    }
+    add(user)
+
+    [summary] = user.get("/api/repositories").json()
+
+    assert [lang["name"] for lang in summary["languages"]] == ["Python", "JavaScript"]
+    assert summary["languages"][0]["share"] == 0.667
+    assert summary["code_lines"] == 3
