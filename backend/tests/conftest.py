@@ -30,7 +30,7 @@ from app.core.config import get_settings  # noqa: E402
 from app.db.session import engine  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.services.ai import jobs as ai_jobs  # noqa: E402
-from app.services.ingestion import pipeline  # noqa: E402
+from app.services.ingestion import github_client, pipeline  # noqa: E402
 from app.services.ingestion.github_client import GitHubClient  # noqa: E402
 from app.services.rag import embeddings  # noqa: E402
 from app.worker.runner import get_job_runner  # noqa: E402
@@ -102,6 +102,12 @@ def llm(monkeypatch) -> FakeLLM:
     monkeypatch.setattr(get_settings(), "llm_provider", "gemini")
     monkeypatch.setattr(get_settings(), "gemini_api_key", SecretStr("test-key"))
     return fake
+
+
+@pytest.fixture(autouse=True)
+def no_retry_pauses(monkeypatch):
+    """GitHub retries wait between attempts in production; tests must not."""
+    monkeypatch.setattr(github_client, "_sleep", lambda seconds: None)
 
 
 @pytest.fixture(autouse=True)

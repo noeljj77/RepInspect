@@ -9,6 +9,7 @@ Security properties:
 """
 
 import re
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
@@ -30,6 +31,18 @@ API_HOST = "api.github.com"
 ALLOWED_HOSTS = frozenset({API_HOST, "codeload.github.com"})
 MAX_REDIRECTS = 5
 _SHA = re.compile(r"[0-9a-f]{40}")
+
+# Pauses before each retry of a request that failed for a temporary reason.
+RETRY_DELAYS = (0.5, 1.5)
+
+
+def _sleep(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+class _TemporaryFailure(GitHubUnavailable):
+    """A timeout or dropped connection: worth trying again."""
+
 
 _NOT_FOUND = (
     "Repository not found. Check the URL, and note that private repositories are not supported."
@@ -117,7 +130,9 @@ class GitHubClient:
 
     def get_languages(self, owner: str, name: str) -> dict[str, int]:
         """Bytes of code per language, as classified by GitHub."""
-        response = self._get(f"https://{API_HOST}/repos/{quote(owner)}/{quote(name)}/languages")
+        response = self._get(
+            f"https://{API_HOST}/repos/{quote(owner)}/{quote(name)}/languages", retry_not_found=True
+        )
         try:
             self._raise_for_status(response)
             return {str(k): int(v) for k, v in response.json().items()}
@@ -133,7 +148,9 @@ class GitHubClient:
         """
         repo_path = f"/repos/{quote(owner)}/{quote(name)}"
         url = f"https://{API_HOST}{repo_path}/commits/{quote(branch, safe='/')}"
-        response = self._get(url, headers={"Accept": "application/vnd.github.sha"})
+        response = self._get(
+            url, headers={"Accept": "application/vnd.github.sha"}, retry_not_found=True
+        )
         try:
             self._raise_for_status(response)
             sha = response.text.strip()
@@ -150,7 +167,9 @@ class GitHubClient:
         if not _SHA.fullmatch(sha):
             raise ValueError("sha must be a full commit hash")
         response = self._get(
-            f"https://{API_HOST}/repos/{quote(owner)}/{quote(name)}/tarball/{sha}", stream=True
+            f"https://{API_HOST}/repos/{quote(owner)}/{quote(name)}/tarball/{sha}",
+            stream=True,
+            retry_not_found=True,
         )
         written = 0
         try:
@@ -206,6 +225,39 @@ class GitHubClient:
             )
 
     def _get(
+        self,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        stream: bool = False,
+        retry_not_found: bool = False,
+    ) -> httpx.Response:
+        """GET with a couple of retries for problems that usually pass in a second or two.
+
+        Timeouts, dropped connections and 502/503/504 are retried. So is a 404, but only
+        when the caller already knows the repository exists (`retry_not_found`): GitHub
+        sometimes answers 404 for a moment on a repository that is there. A first 404 on
+        the repository itself is final.
+        """
+        for delay in (*RETRY_DELAYS, None):
+            try:
+                response = self._get_once(url, headers=headers, stream=stream)
+            except _TemporaryFailure:
+                if delay is None:
+                    raise
+                _sleep(delay)
+                continue
+            retryable = response.status_code in (502, 503, 504) or (
+                retry_not_found and response.status_code == 404
+            )
+            if retryable and delay is not None:
+                response.close()
+                _sleep(delay)
+                continue
+            return response
+        raise AssertionError("unreachable")  # the last pass returns or raises
+
+    def _get_once(
         self, url: str, *, headers: dict[str, str] | None = None, stream: bool = False
     ) -> httpx.Response:
         for _ in range(MAX_REDIRECTS + 1):
@@ -214,11 +266,11 @@ class GitHubClient:
             try:
                 response = self._http.send(request, stream=stream)
             except httpx.TimeoutException:
-                raise GitHubUnavailable(
+                raise _TemporaryFailure(
                     "GitHub took too long to respond. Try again in a moment."
                 ) from None
             except httpx.HTTPError:
-                raise GitHubUnavailable("Could not reach GitHub. Try again in a moment.") from None
+                raise _TemporaryFailure("Could not reach GitHub. Try again in a moment.") from None
 
             if response.status_code in (301, 302, 303, 307, 308):
                 location = response.headers.get("location")

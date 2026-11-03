@@ -255,3 +255,104 @@ def test_a_missing_tarball_is_reported(fake, tmp_path):
 
     with client_for(fake) as github, pytest.raises(RepositoryNotFound):
         github.download_tarball("o", "r", SHA, tmp_path / "x.tar.gz")
+
+
+# --- retries ---
+
+
+def test_a_temporary_server_error_is_retried(fake):
+    calls = []
+    inner = fake.transport()
+
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(503)
+        return inner.handle_request(request)
+
+    with client_with(handler) as github:
+        data = github.get_repository("o", "r")
+
+    assert data["default_branch"] == "main" and len(calls) == 2
+
+
+def test_a_dropped_connection_is_retried():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        if len(calls) < 3:
+            raise httpx.ConnectError("reset", request=request)
+        return httpx.Response(200, text="a" * 40)
+
+    with client_with(handler) as github:
+        sha = github.get_head_commit("o", "r", "main")
+
+    assert sha == "a" * 40 and len(calls) == 3
+
+
+def test_retrying_gives_up_after_a_few_attempts():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(503)
+
+    with client_with(handler) as github, pytest.raises(GitHubUnavailable):
+        github.get_repository("o", "r")
+
+    assert len(calls) == 3  # the first try and two retries
+
+
+def test_a_missing_repository_is_not_retried():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(404)
+
+    with client_with(handler) as github, pytest.raises(RepositoryNotFound):
+        github.get_repository("o", "r")
+
+    assert len(calls) == 1
+
+
+def test_a_404_after_the_repository_was_found_is_retried(tmp_path):
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        if len(calls) == 1:
+            return httpx.Response(404)
+        return httpx.Response(200, content=b"tarball bytes")
+
+    with client_with(handler) as github:
+        written = github.download_tarball("o", "r", SHA, tmp_path / "x.tar.gz")
+
+    assert written == len(b"tarball bytes") and len(calls) == 2
+
+
+def test_a_persistent_404_after_the_repository_was_found_still_ends_as_not_found(tmp_path):
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(404)
+
+    with client_with(handler) as github, pytest.raises(RepositoryNotFound):
+        github.download_tarball("o", "r", SHA, tmp_path / "x.tar.gz")
+
+    assert len(calls) == 3
+
+
+def test_rate_limits_are_not_retried():
+    calls = []
+
+    def handler(request):
+        calls.append(1)
+        return httpx.Response(429)
+
+    with client_with(handler) as github, pytest.raises(RateLimited):
+        github.get_repository("o", "r")
+
+    assert len(calls) == 1
