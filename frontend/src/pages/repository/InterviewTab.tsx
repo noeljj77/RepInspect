@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react'
 
 import { CATEGORY_LABELS, type Category, type Difficulty, type Progress, type Questions } from '../../api/interview'
 import QuestionCard from '../../components/interview/QuestionCard'
+import MockStart from '../../components/mock/MockStart'
 import ReportView from '../../components/interview/ReportView'
 import { buttonClass } from '../../components/ui/button'
 import { useGenerateQuestions, useQuestions } from '../../hooks/useInterview'
@@ -198,6 +199,7 @@ export default function InterviewTab() {
 
   return (
     <div className="space-y-10">
+      <MockStart repositoryId={repository.id} />
       <ReportView repositoryId={repository.id} />
       <section aria-labelledby="practice-heading" className="max-w-3xl">
         <h2 id="practice-heading" className="font-semibold">

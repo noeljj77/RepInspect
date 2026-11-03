@@ -13,6 +13,7 @@ import DependenciesTab from './pages/repository/DependenciesTab'
 import FilesTab from './pages/repository/FilesTab'
 import HistoryTab from './pages/repository/HistoryTab'
 import InterviewTab from './pages/repository/InterviewTab'
+import MockInterviewPage from './pages/repository/MockInterviewPage'
 import NotesTab from './pages/repository/NotesTab'
 import OverviewTab from './pages/repository/OverviewTab'
 
@@ -43,6 +44,7 @@ export const routes: RouteObject[] = [
               { path: 'dependencies', element: <DependenciesTab /> },
               { path: 'chat', element: <ChatTab /> },
               { path: 'interview', element: <InterviewTab /> },
+              { path: 'interview/mock/:interviewId', element: <MockInterviewPage /> },
               { path: 'notes', element: <NotesTab /> },
               { path: 'history', element: <HistoryTab /> },
             ],
