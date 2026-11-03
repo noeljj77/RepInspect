@@ -119,6 +119,8 @@ export interface RepositorySummary extends RepositoryBase {
   /** The main languages by lines of code (share from 0 to 1), for the library list. */
   languages: Array<{ name: string; share: number }>
   code_lines: number | null
+  /** Practice questions for this repository and how far the person has got with them. */
+  practice: { total: number; practicing: number; confident: number }
 }
 
 export interface RepositoryDetail extends RepositoryBase {

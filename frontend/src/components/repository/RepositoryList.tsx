@@ -1,11 +1,12 @@
-import { FileArchive, Search, X } from 'lucide-react'
-import { Link, useSearchParams } from 'react-router'
+import { FileArchive, Search, Sparkles, X } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 
 import type { RepositorySummary } from '../../api/repositories'
 import { useCollections } from '../../hooks/useLibrary'
-import { useRepositories } from '../../hooks/useRepositories'
+import { useAddRepository, useRepositories } from '../../hooks/useRepositories'
 import { cn } from '../../lib/cn'
 import { formatCount, formatRelativeTime } from '../../lib/format'
+import { buttonClass } from '../ui/button'
 import StatusBadge from './StatusBadge'
 
 // The same calm palette as the language bar on the repository page.
@@ -22,6 +23,23 @@ function matches(repository: RepositorySummary, query: string): boolean {
     .every((word) => text.includes(word))
 }
 
+const SORTS = [
+  { value: 'newest', label: 'Newest first' },
+  { value: 'practice', label: 'Least practised first' },
+  { value: 'name', label: 'Name' },
+] as const
+type Sort = (typeof SORTS)[number]['value']
+
+const practised = (r: RepositorySummary) => r.practice.practicing + r.practice.confident
+/** Share of the practice questions already worked on; repositories with none come first. */
+const practiceShare = (r: RepositorySummary) => (r.practice.total ? practised(r) / r.practice.total : -1)
+
+function sorted(items: RepositorySummary[], sort: Sort): RepositorySummary[] {
+  if (sort === 'name') return [...items].sort((a, b) => a.name.localeCompare(b.name))
+  if (sort === 'practice') return [...items].sort((a, b) => practiceShare(a) - practiceShare(b))
+  return items // the server already sends the newest first
+}
+
 /** Filters live in the address (?q=, ?label=, ?collection=) so they survive a reload and can be shared. */
 function useFilters() {
   const [params, setParams] = useSearchParams()
@@ -35,8 +53,10 @@ function useFilters() {
     query: params.get('q') ?? '',
     label: params.get('label'),
     collection: params.get('collection'),
+    sort: (SORTS.find((s) => s.value === params.get('sort'))?.value ?? 'newest') as Sort,
     set,
-    clear: () => setParams({}, { replace: true }),
+    // Clearing the filters keeps the chosen order.
+    clear: () => setParams(params.get('sort') ? { sort: params.get('sort')! } : {}, { replace: true }),
   }
 }
 
@@ -61,20 +81,40 @@ function Languages({ repository }: { repository: RepositorySummary }) {
   )
 }
 
+function Practice({ repository }: { repository: RepositorySummary }) {
+  // Absent when talking to an older server during a deploy.
+  const { total, practicing, confident } = repository.practice ?? { total: 0, practicing: 0, confident: 0 }
+  if (total === 0) {
+    return repository.latest_analysis?.status === 'completed' ? <span>No practice questions yet</span> : null
+  }
+  const done = practicing + confident
+  return (
+    <span className="flex items-center gap-2" title={`${confident} confident, ${practicing} practising, ${total - done} new`}>
+      <span aria-hidden="true" className="flex h-1.5 w-14 overflow-hidden rounded-full bg-line">
+        <span className="bg-ok" style={{ width: `${(confident / total) * 100}%` }} />
+        <span className="bg-mark" style={{ width: `${(practicing / total) * 100}%` }} />
+      </span>
+      <span className={cn(done === 0 && 'text-mark-text')}>
+        {done} of {total} practised
+      </span>
+    </span>
+  )
+}
+
 function Row({ repository }: { repository: RepositorySummary }) {
   const analysis = repository.latest_analysis
   return (
     <li>
       <Link
         to={`/repositories/${repository.id}`}
-        className="group grid gap-x-4 gap-y-1.5 px-5 py-4 transition-colors hover:bg-raised/50 sm:grid-cols-[minmax(0,1fr)_auto]"
+        className="group grid gap-x-4 gap-y-1.5 border-l-2 border-transparent py-4 pr-5 pl-[18px] transition-colors hover:border-mark hover:bg-mark/[0.06] sm:grid-cols-[minmax(0,1fr)_auto]"
       >
         <div className="min-w-0">
           <p className="flex min-w-0 items-center gap-2">
             {repository.source_type === 'zip' && (
               <FileArchive size={14} className="shrink-0 text-muted" aria-label="Uploaded ZIP" />
             )}
-            <span className="truncate font-medium group-hover:text-mark">
+            <span className="truncate text-[15px] font-semibold group-hover:text-mark-text">
               {repository.owner && <span className="font-normal text-muted">{repository.owner}/</span>}
               {repository.name}
             </span>
@@ -86,9 +126,10 @@ function Row({ repository }: { repository: RepositorySummary }) {
         <div className="sm:row-span-2 sm:self-center">
           {analysis && <StatusBadge status={analysis.status} />}
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-faint">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[11.5px] text-faint">
           <Languages repository={repository} />
           {repository.code_lines != null && <span>{formatCount(repository.code_lines)} lines</span>}
+          <Practice repository={repository} />
           <span>
             {analysis?.completed_at
               ? `Analyzed ${formatRelativeTime(analysis.completed_at)}`
@@ -102,6 +143,40 @@ function Row({ repository }: { repository: RepositorySummary }) {
         </div>
       </Link>
     </li>
+  )
+}
+
+const SAMPLE_URL = 'https://github.com/pallets/click'
+
+/** First visit: offer a ready-made repository so the first result takes seconds, not a decision. */
+function EmptyLibrary() {
+  const add = useAddRepository()
+  const navigate = useNavigate()
+  return (
+    <div className="rounded-xl border border-dashed border-line px-6 py-10">
+      <h3 className="font-semibold">No repositories yet</h3>
+      <p className="mt-1.5 max-w-md text-sm text-muted">
+        Paste a GitHub link or upload a ZIP above. Each one is analyzed once and saved here, ready to explore, chat
+        with and practise on.
+      </p>
+      <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <button
+          type="button"
+          disabled={add.isPending}
+          onClick={() => add.mutate(SAMPLE_URL, { onSuccess: (repository) => navigate(`/repositories/${repository.id}`) })}
+          className={buttonClass('secondary', 'h-9 px-3')}
+        >
+          <Sparkles size={15} className="text-mark-text" aria-hidden="true" />
+          {add.isPending ? 'Adding…' : 'Try it with pallets/click'}
+        </button>
+        <span className="text-sm text-faint">A small, well-known project. It takes under a minute.</span>
+      </div>
+      {add.isError && (
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {add.error.message}
+        </p>
+      )}
+    </div>
   )
 }
 
@@ -130,15 +205,7 @@ export default function RepositoryList() {
   }
 
   if (data.length === 0) {
-    return (
-      <div className="rounded-xl border border-dashed border-line px-6 py-10">
-        <h3 className="font-semibold">No repositories yet</h3>
-        <p className="mt-1.5 max-w-md text-sm text-muted">
-          Paste a GitHub link or upload a ZIP above. Each one is analyzed once and saved here, ready to explore,
-          chat with and practise on.
-        </p>
-      </div>
-    )
+    return <EmptyLibrary />
   }
 
   const labels = [...new Set(data.flatMap((r) => r.labels))].sort((a, b) => a.localeCompare(b))
@@ -149,6 +216,7 @@ export default function RepositoryList() {
       (!filters.label || r.labels.includes(filters.label)) &&
       (!filters.collection || r.collection_ids.includes(filters.collection)),
   )
+  const ordered = sorted(shown, filters.sort)
   const filtering = Boolean(filters.query || filters.label || filters.collection)
 
   return (
@@ -165,6 +233,18 @@ export default function RepositoryList() {
             className="h-9 w-full rounded-md border border-line bg-canvas pr-3 pl-9 text-sm placeholder:text-faint focus:border-mark focus:outline-none"
           />
         </label>
+        <select
+          aria-label="Sort by"
+          value={filters.sort}
+          onChange={(event) => filters.set('sort', event.target.value === 'newest' ? null : event.target.value)}
+          className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink"
+        >
+          {SORTS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         {collections.length > 0 && (
           <select
             aria-label="Collection"
@@ -181,7 +261,7 @@ export default function RepositoryList() {
           </select>
         )}
         {collection && (
-          <span className="inline-flex items-center gap-1 rounded-full border border-mark/40 py-0.5 pr-1 pl-2.5 text-xs text-mark">
+          <span className="inline-flex items-center gap-1 rounded-full border border-mark/40 py-0.5 pr-1 pl-2.5 text-xs text-mark-text">
             In {collection.name}
             <button
               type="button"
@@ -207,7 +287,7 @@ export default function RepositoryList() {
                 onClick={() => filters.set('label', active ? null : label)}
                 className={cn(
                   'rounded-full border px-2.5 py-0.5 text-xs',
-                  active ? 'border-mark/50 bg-mark/15 text-mark' : 'border-line text-muted hover:border-faint hover:text-ink',
+                  active ? 'border-mark/50 bg-mark/15 text-mark-text' : 'border-line text-muted hover:border-faint hover:text-ink',
                 )}
               >
                 {label}
@@ -220,13 +300,13 @@ export default function RepositoryList() {
       {shown.length === 0 ? (
         <div className="rounded-xl border border-dashed border-line px-6 py-6 text-sm">
           <p className="text-muted">No repositories match these filters.</p>
-          <button type="button" onClick={filters.clear} className="mt-1.5 text-mark hover:underline">
+          <button type="button" onClick={filters.clear} className="mt-1.5 text-mark-text hover:underline">
             Clear filters
           </button>
         </div>
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
-          {shown.map((repository) => (
+          {ordered.map((repository) => (
             <Row key={repository.id} repository={repository} />
           ))}
         </ul>

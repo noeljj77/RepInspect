@@ -224,6 +224,7 @@ export function repositorySummary(overrides: Partial<RepositorySummary> = {}): R
     latest_analysis: analysisSummary(),
     languages: [{ name: 'Python', share: 0.9 }],
     code_lines: 9000,
+    practice: { total: 0, practicing: 0, confident: 0 },
     ...overrides,
   }
 }

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 import { ada, mockApi, type ApiRoutes } from '../test/mockApi'
@@ -71,6 +71,51 @@ describe('DashboardPage', () => {
       renderRoute('/dashboard')
 
       expect(await screen.findByRole('heading', { name: 'No repositories yet' })).toBeInTheDocument()
+    })
+
+    it('offers a sample repository on the empty library', async () => {
+      const user = userEvent.setup()
+      const fetchMock = mockApi(
+        dashboardApi({
+          'POST /api/repositories': { status: 202, body: repositoryDetail({ status: 'queued' }) },
+          [`GET /api/repositories/${REPO_ID}`]: { body: repositoryDetail({ status: 'queued' }) },
+        }),
+      )
+      const { router } = renderRoute('/dashboard')
+
+      await user.click(await screen.findByRole('button', { name: 'Try it with pallets/click' }))
+
+      await waitFor(() => expect(router.state.location.pathname).toBe(`/repositories/${REPO_ID}`))
+      const post = fetchMock.mock.calls.find(([url, init]) => url === '/api/repositories' && init?.method === 'POST')
+      expect(JSON.parse(String(post?.[1]?.body))).toEqual({ url: 'https://github.com/pallets/click' })
+    })
+
+    it('shows how far each repository has been practised, and can list the least practised first', async () => {
+      const user = userEvent.setup()
+      mockApi(
+        dashboardApi({
+          'GET /api/repositories': {
+            body: [
+              repositorySummary({ id: 'a', name: 'alpha', practice: { total: 10, practicing: 2, confident: 6 } }),
+              repositorySummary({ id: 'b', name: 'beta', practice: { total: 4, practicing: 0, confident: 0 } }),
+              repositorySummary({ id: 'c', name: 'gamma', practice: { total: 0, practicing: 0, confident: 0 } }),
+            ],
+          },
+        }),
+      )
+      renderRoute('/dashboard')
+
+      expect(await screen.findByText('8 of 10 practised')).toBeInTheDocument()
+      expect(screen.getByText('0 of 4 practised')).toBeInTheDocument()
+      expect(screen.getByText('No practice questions yet')).toBeInTheDocument()
+      const order = () =>
+        within(screen.getByRole('region', { name: 'Your repositories' }))
+          .getAllByRole('link')
+          .map((link) => link.textContent)
+
+      await user.selectOptions(screen.getByRole('combobox', { name: 'Sort by' }), 'practice')
+
+      expect(order().map((text) => text?.match(/alpha|beta|gamma/)?.[0])).toEqual(['gamma', 'beta', 'alpha'])
     })
 
     it('lists saved repositories with their status', async () => {
