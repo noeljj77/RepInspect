@@ -13,8 +13,8 @@ project report, repository-specific questions and a mock interview with feedback
 > and class, see its dependencies, frameworks and most important files, get an overview
 > and file explanations, ask questions whose answers quote the exact lines they rely on,
 > organise it all with labels, notes, collections and version history, and prepare for
-> interviews with notes and practice questions about the code. Mock interviews are being
-> built next (see [docs/architecture.md](docs/architecture.md)).
+> interviews with notes, practice questions and graded mock interviews about the code.
+> Hardening and deployment come next (see [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
 
@@ -212,7 +212,25 @@ The **Interview** tab turns a repository into material for talking about it:
   confident. A progress bar and filters show what still needs work. Questions and progress
   belong to the repository, so they stay when you refresh it.
 
-Both use the same Gemini key and daily allowance as the other AI features.
+### Mock interviews
+
+Start one from the Interview tab: 3, 5 or 8 questions, optionally at one level. Questions
+come from your practice list (the ones you are least sure about first), and more are
+written if there are too few. They are asked one at a time, with no hints.
+
+Each answer is graded from 0 to 4 against the question's checked answer points and the
+code a search finds for it:
+
+- every specific statement you make is checked: the code agrees, the code says otherwise,
+  it is not in the code that was searched, or it could not be checked;
+- the points a strong answer would also cover are listed with their code;
+- if something important was missing, one follow-up question probes it.
+
+At the end (or when you end it early) a report shows the overall score, scores by topic,
+what to work on, statements the code contradicts, and the files to read next.
+
+All of these use the same Gemini key and daily allowance as the other AI features. Each
+graded answer counts as one request.
 
 ## Running tests
 
