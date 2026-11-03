@@ -282,3 +282,27 @@ def test_other_people_cannot_see_or_change_questions(client, other_client, repo)
 
 def test_login_is_required(client, other_client, repo):
     assert other_client.get(url(repo)).status_code == 401
+
+
+def test_the_library_list_shows_practice_progress(client, repo):
+    [before] = client.get("/api/repositories").json()
+    assert before["practice"] == {"total": 0, "practicing": 0, "confident": 0}
+
+    generate(client, repo)
+    q = client.get(url(repo)).json()["questions"][0]
+    client.patch(url(repo, f"/{q['id']}"), json={"status": "confident"})
+
+    [after] = client.get("/api/repositories").json()
+    assert after["practice"] == {"total": 1, "practicing": 0, "confident": 1}
+
+
+def test_practice_progress_is_counted_per_repository(client, repo, github, llm):
+    generate(client, repo)
+    llm.respond(RawQuestions, RawQuestions(questions=[question("Second?"), question("Third?")]))
+    github.files = FILES
+    other = add(client, "https://github.com/acme/other").json()
+    generate(client, other)
+
+    summaries = {s["id"]: s["practice"]["total"] for s in client.get("/api/repositories").json()}
+
+    assert summaries == {repo["id"]: 1, other["id"]: 2}

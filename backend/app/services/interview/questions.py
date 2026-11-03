@@ -216,3 +216,25 @@ def mark_interrupted(db: Session) -> int:
     )
     db.commit()
     return result.rowcount or 0
+
+
+def progress_counts(
+    db: Session, repository_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, dict[str, int]]:
+    """How many practice questions each repository has, by progress, in one query."""
+    counts = {rid: {"total": 0, "practicing": 0, "confident": 0} for rid in repository_ids}
+    if repository_ids:
+        rows = db.execute(
+            select(
+                InterviewQuestion.saved_repository_id,
+                InterviewQuestion.status,
+                func.count(),
+            )
+            .where(InterviewQuestion.saved_repository_id.in_(repository_ids))
+            .group_by(InterviewQuestion.saved_repository_id, InterviewQuestion.status)
+        )
+        for repository_id, status, count in rows:
+            counts[repository_id]["total"] += count
+            if status in ("practicing", "confident"):
+                counts[repository_id][status] = count
+    return counts

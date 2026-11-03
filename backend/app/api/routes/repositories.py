@@ -34,6 +34,7 @@ from app.services.analysis.importance import IMPORTANT_THRESHOLD
 from app.services.ingestion.errors import InvalidRepositoryUrl
 from app.services.ingestion.github_url import parse_github_url
 from app.services.ingestion.pipeline import run_analysis
+from app.services.interview import questions as interview_questions
 from app.storage import artifacts
 from app.worker.runner import JobRunner, get_job_runner
 
@@ -168,6 +169,7 @@ def list_repositories(
     ids = [r.id for r in saved]
     latest = repositories.latest_analyses(db, ids)
     memberships = library.collection_ids(db, ids)
+    practice = interview_questions.progress_counts(db, ids)
     summaries = []
     for repository in saved:
         analysis = latest.get(repository.id)
@@ -181,6 +183,7 @@ def list_repositories(
                     "latest_analysis": analysis,
                     "languages": languages,
                     "code_lines": code_lines,
+                    "practice": practice[repository.id],
                 },
                 from_attributes=True,
             )

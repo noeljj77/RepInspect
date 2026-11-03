@@ -70,6 +70,14 @@ class LanguageShare(BaseModel):
     share: float  # of the lines of code, 0 to 1
 
 
+class PracticeProgress(BaseModel):
+    """Practice questions for a repository and how far the person has got with them."""
+
+    total: int = 0
+    practicing: int = 0
+    confident: int = 0
+
+
 class RepositorySummary(BaseModel):
     id: uuid.UUID
     source_type: str
@@ -84,6 +92,7 @@ class RepositorySummary(BaseModel):
     # From the latest analysis, for the library list: the main languages and the size.
     languages: list[LanguageShare] = []
     code_lines: int | None = None
+    practice: PracticeProgress = PracticeProgress()
 
 
 class RepositoryDetail(BaseModel):
