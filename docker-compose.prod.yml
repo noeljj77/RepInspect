@@ -1,0 +1,50 @@
+# Production-style stack: database, backend and web server (nginx). Only the web server is
+# reachable from outside; put TLS in front of it (see docs/deployment.md).
+#   cp .env.example .env   # then fill it in
+#   docker compose -f docker-compose.prod.yml up -d --build
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: repinspect
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: repinspect
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repinspect"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://repinspect:${POSTGRES_PASSWORD}@db:5432/repinspect
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      # nginx overwrites X-Forwarded-For, so the backend may rely on it.
+      TRUST_PROXY_HEADERS: "true"
+    volumes:
+      - artifacts:/data/artifacts
+      - models:/data/models
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  pgdata:
+  artifacts:
+  models:
