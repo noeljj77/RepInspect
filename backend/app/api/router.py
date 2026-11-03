@@ -8,6 +8,7 @@ from app.api.routes import (
     collections,
     health,
     interview,
+    mock,
     notes,
     repositories,
 )
@@ -22,3 +23,4 @@ api_router.include_router(chat.router)
 api_router.include_router(notes.router)
 api_router.include_router(collections.router)
 api_router.include_router(interview.router)
+api_router.include_router(mock.router)
