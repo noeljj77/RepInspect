@@ -8,6 +8,7 @@ from app.models.chat import ChatMessage, ChatSession, MessageStatus
 from app.models.code_analysis import CodeImport, CodeSymbol, ProjectDependency
 from app.models.interview import BatchStatus, InterviewQuestion, Progress, QuestionBatch
 from app.models.library import Collection, CollectionRepository, RepositoryNote
+from app.models.mock_interview import InterviewStatus, MockInterview, MockTurn, TurnStatus
 from app.models.repository_analysis import (
     IN_PROGRESS_STATUSES,
     AnalysisStatus,
@@ -36,7 +37,10 @@ __all__ = [
     "CollectionRepository",
     "IndexStatus",
     "InterviewQuestion",
+    "InterviewStatus",
     "MessageStatus",
+    "MockInterview",
+    "MockTurn",
     "Progress",
     "ProjectDependency",
     "QuestionBatch",
@@ -44,5 +48,6 @@ __all__ = [
     "RepositoryNote",
     "SavedRepository",
     "SearchIndex",
+    "TurnStatus",
     "User",
 ]
