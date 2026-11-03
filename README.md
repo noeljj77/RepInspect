@@ -7,6 +7,8 @@ technologies, and answers questions about the implementation with references to 
 exact files and lines. It then turns the codebase into interview preparation: a
 project report, repository-specific questions and a mock interview with feedback.
 
+![RepInspect: analyze a repository, ask about it, practise the interview](frontend/public/how-it-works.gif)
+
 > Status: early development. User accounts, GitHub and ZIP import, static code
 > analysis, AI explanations, chat and a personal library are in place: save a public
 > repository or upload a project, browse its files with an outline of every function
