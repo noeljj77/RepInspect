@@ -12,9 +12,9 @@ project report, repository-specific questions and a mock interview with feedback
 > repository or upload a project, browse its files with an outline of every function
 > and class, see its dependencies, frameworks and most important files, get an overview
 > and file explanations, ask questions whose answers quote the exact lines they rely on,
-> and organise it all with labels, notes, collections and version history. Interview
-> features are being built milestone by milestone (see
-> [docs/architecture.md](docs/architecture.md)).
+> organise it all with labels, notes, collections and version history, and prepare for
+> interviews with notes and practice questions about the code. Mock interviews are being
+> built next (see [docs/architecture.md](docs/architecture.md)).
 
 ## Tech stack
 
@@ -193,6 +193,26 @@ index is built, into `backend/data/models`. After that it loads from disk and wo
 offline. Indexing runs on the CPU, and pip installs the CPU-only build of PyTorch on
 Windows. Chat questions use the same Gemini key and daily allowance as the AI
 explanations.
+
+## Interview preparation
+
+The **Interview** tab turns a repository into material for talking about it:
+
+- **Interview notes**: a short pitch for "tell me about this project", the main flow in
+  order, the decisions you should be able to defend (with alternatives and trade-offs),
+  technical highlights worth bringing up, and weak spots an interviewer may probe. Every
+  statement about the code quotes the lines it relies on; alternatives, trade-offs and
+  weak spots are marked as suggestions.
+- **Practice questions**: ask for 5, 8 or 12 at a time, optionally by topic
+  (architecture, implementation, technology choices, data, testing, security, performance,
+  trade-offs) and difficulty. Each question says why an interviewer asks it, lists the
+  points a strong answer covers (checked against the code like every other AI answer) and
+  likely follow-ups. New requests never repeat earlier questions.
+- **Progress**: write your own answer under each question and mark it new, practicing or
+  confident. A progress bar and filters show what still needs work. Questions and progress
+  belong to the repository, so they stay when you refresh it.
+
+Both use the same Gemini key and daily allowance as the other AI features.
 
 ## Running tests
 

@@ -77,6 +77,7 @@ later migrations.
 | `src/components/ui/` | Small shared pieces (button styles, logo) |
 | `src/components/ai/` | AI explanation panel (request, wait, failure, regenerate), findings and citations |
 | `src/components/chat/` | Chat tab pieces: index progress, question box, answers with citation markers |
+| `src/components/interview/` | Interview notes and practice question cards |
 | `src/components/library/` | Labels, collections, notes, refresh, upload and delete controls |
 | `src/components/layout/` | Public header and authenticated app shell |
 | `src/pages/` | One component per route |
@@ -249,16 +250,17 @@ GET endpoint every two seconds while the status is `pending`.
 Implemented so far: `users`, `saved_repositories`, `repository_analyses`,
 `analysis_files`, `code_symbols`, `code_imports`, `dependencies`, `ai_explanations`,
 `ai_requests`, `search_indexes`, `code_chunks`, `chat_sessions`, `chat_messages`,
-`repository_notes`, `collections`, `collection_repositories`. The rest is planned.
+`repository_notes`, `collections`, `collection_repositories`, `question_batches`,
+`interview_questions`. The rest is planned.
 
 ```
 users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< analysis_files ──< code_symbols
        │                       │                         ├─< dependencies
        │                       │                         ├── search_indexes (one per analysis)
        │                       │                         ├─< code_chunks
-       │                       │                         ├─< ai_explanations
-       │                       │                         ├─< chat_sessions ──< chat_messages
-       │                       │                         └─< interview_reports ──< interview_questions
+       │                       │                         ├─< ai_explanations (overview, technologies, files, interview notes)
+       │                       │                         └─< chat_sessions ──< chat_messages
+       │                       ├─< question_batches ──< interview_questions
        │                       ├─< repository_notes
        │                       └─< mock_interview_sessions ──< mock_interview_turns
        ├─< ai_requests
@@ -276,6 +278,27 @@ users ─┬─< saved_repositories ─┬─< repository_analyses ─┬─< an
 - `ai_explanations` has `UNIQUE(analysis_id, kind, target_path)`: one explanation per
   analysis, kind and file. Regenerating replaces it. A new analysis starts without
   explanations, since the code may have changed.
+
+## Interview preparation
+
+```
+Interview notes:   POST /ai/report  →  the AI explanation flow (kind "report")
+                   evidence pack (as for the overview) → model → grounding → stored
+
+Questions:         POST /questions {count, categories?, difficulty?}
+                   → question_batches row (pending) → background job
+                   evidence pack + earlier questions → model → grounding of each answer point
+                   → interview_questions rows, appended in order
+Progress:          PATCH /questions/{id} {status?, user_answer?}
+```
+
+| Concern | Decision |
+|---|---|
+| Reuse | The notes are a new kind of AI explanation, so they get its polling, failure handling, regenerate, limits and grounding for free. Answer points are `Finding`s, checked by the same `Grounding.ground_finding` as everything else. |
+| Honesty | Statements about the code need confirmed quotes. Alternatives, trade-offs and weak spots are labelled as suggestions in the hint colour. A question whose answer points could not be confirmed is kept, since it may still be a fair question, but marked so the suggested answer reads as a guess. The pitch may only describe what the material shows: no invented users, numbers or results. |
+| No repeats | The prompt lists up to 80 earlier questions with "do not repeat"; afterwards, questions whose normalised text matches an earlier one are dropped anyway. Questions in categories that were not asked for, and any beyond the requested count, are dropped too. |
+| Where things live | Notes belong to an analysis (like every explanation), since they cite one version. Questions and progress belong to the repository and survive a refresh; each question records the version it was written from, and the page says when that is older than the version shown. |
+| Limits | A question request counts against the shared daily AI allowance, and a pending batch counts towards the cap on simultaneous AI requests. One batch at a time per repository, at most 200 questions per repository. Interrupted batches are marked failed at startup. |
 
 ## Chat: retrieval-augmented generation
 
