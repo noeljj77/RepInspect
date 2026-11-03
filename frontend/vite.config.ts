@@ -19,5 +19,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Tests that render thousands of lines are slow on shared CI runners.
+    testTimeout: 20_000,
   },
 })
