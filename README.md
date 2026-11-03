@@ -14,7 +14,8 @@ project report, repository-specific questions and a mock interview with feedback
 > and file explanations, ask questions whose answers quote the exact lines they rely on,
 > organise it all with labels, notes, collections and version history, and prepare for
 > interviews with notes, practice questions and graded mock interviews about the code.
-> Hardening and deployment come next (see [docs/architecture.md](docs/architecture.md)).
+> Login rate limiting, logout revocation, security headers, Docker and CI are in place
+> too (see [docs/architecture.md](docs/architecture.md) and [docs/deployment.md](docs/deployment.md)).
 
 ## Tech stack
 
@@ -33,6 +34,7 @@ project report, repository-specific questions and a mock interview with feedback
 backend/     FastAPI app, Alembic migrations, pytest suite
 frontend/    React + Vite single-page app
 docker/      Container init scripts (Postgres)
+.github/     CI workflow
 docs/        Architecture and design notes
 ```
 
@@ -245,6 +247,18 @@ npm test
 npm run lint
 npm run build
 ```
+
+## Deploying
+
+`docker-compose.prod.yml` builds and runs the database, backend and web server together:
+
+```bash
+cp .env.example .env        # set POSTGRES_PASSWORD and JWT_SECRET
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Then open http://localhost:8080. Put TLS in front of it for anything public; see
+[docs/deployment.md](docs/deployment.md).
 
 ## Configuration
 

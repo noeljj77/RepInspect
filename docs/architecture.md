@@ -80,7 +80,7 @@ later migrations.
 | `src/components/interview/` | Interview notes and practice question cards |
 | `src/components/mock/` | Mock interview start panel, grades and claim checks |
 | `src/components/library/` | Labels, collections, notes, refresh, upload and delete controls |
-| `src/components/layout/` | Public header and authenticated app shell |
+| `src/components/layout/` | Public header, authenticated app shell (sidebar with repositories and collections) and the service status line |
 | `src/pages/` | One component per route |
 
 Server state (anything fetched from the API) is handled by TanStack Query, which gives
@@ -114,9 +114,11 @@ every later request ─► cookie ─► get_current_user dependency ─► User
 | App refuses to start without a 32+ character `JWT_SECRET`, and rejects the development placeholder in production | A guessable signing key would let anyone forge logins. |
 | Email lowercased on write, unique constraint in the database | `Ada@x.com` and `ada@x.com` are one account, and concurrent sign-ups cannot create duplicates. |
 
-Known limits, to be addressed in the hardening milestone: logout clears the cookie but
-a stolen token stays valid until it expires (tokens are stateless), and there is no
-rate limiting on login yet.
+| `jti` claim and a deny-list table (`revoked_tokens`) | Tokens are stateless, so clearing the cookie alone would leave a copied token valid until it expires. Logout stores the token id; `get_current_user` rejects revoked ids. Only the id and expiry are stored, and rows past their expiry are deleted at startup. |
+| Failed logins counted per email (5) and per IP address (30) in a 15-minute window | Past the limit the API answers 429 with `Retry-After`, without checking the password. The counts are in memory (`app/core/rate_limit.py`), which fits the single-process design; several workers would each keep their own counts, and Redis would be the next step. A success clears the email count but not the IP count, so logging in to your own account cannot reset the guesses made against someone else's. |
+| Rate limits can lock a real owner out for a while | The usual trade-off: an attacker can fail logins to someone's email to slow them down. The window is short and the limit applies per email, so other accounts are not affected. |
+| `X-Forwarded-For` is trusted only when `TRUST_PROXY_HEADERS=true` | Otherwise any client could pick its own address. The bundled nginx overwrites the header with the address it saw, and the last entry is used. |
+| Security headers on every API response (`app/core/security_headers.py`) | `nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, a `default-src 'none'` content security policy, `Cache-Control: no-store` for private data, and HSTS in production. The web server (nginx) sets the equivalent headers, with a policy that allows the app's own scripts and styles, for the pages themselves. |
 
 On the frontend, `useCurrentUser` (TanStack Query) asks `/api/auth/me` once and shares
 the answer. `RequireAuth` wraps the app shell and redirects guests to `/login`;
@@ -362,4 +364,12 @@ Answering (one background job per question):
 7. Library – ZIP upload, labels, notes, collections, analysis history
 8. Interview preparation – report, question generator, progress tracking
 9. Mock interviews – sessions, grading, follow-ups, reports
-10. Hardening and deployment – security tests, Docker, CI, docs
+10. Hardening and deployment – UI redesign, login rate limiting, logout revocation, security headers, Docker, CI, docs
+
+## Deployment
+
+`docker-compose.prod.yml` runs three containers: Postgres, the backend (Python 3.11 slim with
+the CPU-only PyTorch build; it applies migrations and then starts one uvicorn process) and the
+web server (nginx serving the built app and proxying `/api`). Imported code and the embedding
+model are on named volumes. Only nginx is published. CI (`.github/workflows/ci.yml`) runs the
+backend and frontend checks and builds the web image. See [deployment.md](deployment.md).
