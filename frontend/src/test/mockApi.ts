@@ -14,7 +14,7 @@ export const ada = {
 
 export const loggedOut = { status: 401, body: { detail: 'Not authenticated' } }
 
-const AI_READ = /^GET \/api\/repositories\/[^/]+\/ai\/(overview|technologies|file)(?:\?path=(.*))?$/
+const AI_READ = /^GET \/api\/repositories\/[^/]+\/ai\/(overview|technologies|file|report)(?:\?path=(.*))?$/
 
 /**
  * Most pages ask for AI explanations as soon as they open. Unless a test lists those
