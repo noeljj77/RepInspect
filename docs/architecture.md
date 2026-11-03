@@ -91,7 +91,26 @@ caching, loading and error states, and polling for long-running jobs.
 The accent colour (amber, `--color-mark`) means "taken from the repository": highlighted
 lines, citations and the primary action. Periwinkle (`--color-hint`) marks AI suggestions
 that are not backed by the code. Keeping that split consistent lets users tell verified
-findings from generated advice at a glance.
+findings from generated advice at a glance. The same idea marks the interface itself: the
+active sidebar item, a hovered library row and a highlighted line of code all get an amber bar
+in the margin.
+
+### Themes
+
+Dark is the default; a switch in the sidebar and the public header turns on the light theme.
+All colours are tokens (`--color-*` in `index.css`). `<html data-theme="light">` replaces their
+values, so components never branch on the theme. `--color-mark` is the highlighter colour for
+fills; `--color-mark-text` is a darker amber for text, which needs contrast on white. The choice
+is kept in `localStorage`, and `public/theme-init.js` applies it before the first paint (a
+separate file, because the production content security policy allows no inline scripts).
+
+### Loading and exports
+
+Every page inside the app shell, and each repository tab, is a lazy chunk (`lazyElement` in
+`components/ui/lazyRoute.tsx`), so the first load only downloads the landing page and the shell.
+Interview notes and mock interview reports can be exported from the page: Markdown is built in
+the browser (`lib/exportReport.ts`), and "Save as PDF" opens the print dialog with a print
+stylesheet that shows only the report (`data-print-area`) in the light colours.
 
 ## Authentication
 

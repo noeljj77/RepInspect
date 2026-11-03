@@ -139,6 +139,11 @@ Java with Tree-sitter. Code is only parsed, never run.
 - **Notes** belong to a repository and survive refreshes. A note can point at a file and
   line: open a file, pick a line, and write the note next to the code.
 - **Delete** removes a repository with everything stored for it, on disk too.
+- **Practice progress** shows on each library row ("3 of 12 practised"), and the list can
+  be sorted with the least practised repository first.
+- **Export** the interview notes or a mock interview report as Markdown, or save them as
+  a PDF from the print dialog.
+- A **dark or light theme** can be chosen with the switch in the sidebar.
 
 ## AI explanations
 
