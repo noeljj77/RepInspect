@@ -39,6 +39,16 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=60 * 24 * 7, gt=0)
     session_cookie_name: str = "repinspect_session"
 
+    # Failed logins are counted per email and per IP address; past the limit, further
+    # attempts get 429 until the oldest failure leaves the window. The per-IP limit is
+    # higher so one shared address (a school, an office) is not locked out by one typo.
+    login_max_failures_per_email: int = Field(default=5, gt=0)
+    login_max_failures_per_ip: int = Field(default=30, gt=0)
+    login_window_seconds: int = Field(default=15 * 60, gt=0)
+    # Behind a reverse proxy every request comes from the proxy's address. Set this only
+    # when the proxy overwrites X-Forwarded-For (the bundled nginx config does).
+    trust_proxy_headers: bool = False
+
     # --- GitHub ingestion -------------------------------------------------
     # Optional. Without a token GitHub allows 60 API requests per hour; with one, 5000.
     github_token: SecretStr | None = None

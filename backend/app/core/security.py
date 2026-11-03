@@ -1,6 +1,7 @@
 """Password hashing and login tokens."""
 
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import jwt
@@ -44,22 +45,41 @@ def create_access_token(user_id: uuid.UUID) -> str:
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
+        # A unique id per token, so one login can be revoked on logout (see services/sessions.py).
+        "jti": uuid.uuid4().hex,
         "iat": now,
         "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
     }
     return jwt.encode(payload, settings.jwt_secret.get_secret_value(), algorithm=JWT_ALGORITHM)
 
 
-def decode_access_token(token: str) -> uuid.UUID | None:
-    """Return the user id from a valid token, or None for anything invalid or expired."""
+@dataclass(frozen=True)
+class TokenClaims:
+    user_id: uuid.UUID
+    jti: str
+    expires_at: datetime
+
+
+def decode_token(token: str) -> TokenClaims | None:
+    """Return the claims of a valid token, or None for anything invalid or expired."""
     try:
         payload = jwt.decode(
             token,
             get_settings().jwt_secret.get_secret_value(),
             # Pinning the algorithm list blocks "alg: none" and key-confusion attacks.
             algorithms=[JWT_ALGORITHM],
-            options={"require": ["exp", "sub"]},
+            options={"require": ["exp", "sub", "jti"]},
         )
-        return uuid.UUID(payload["sub"])
+        return TokenClaims(
+            user_id=uuid.UUID(payload["sub"]),
+            jti=str(payload["jti"]),
+            expires_at=datetime.fromtimestamp(payload["exp"], UTC),
+        )
     except (jwt.PyJWTError, ValueError):
         return None
+
+
+def decode_access_token(token: str) -> uuid.UUID | None:
+    """Return the user id from a valid token, or None for anything invalid or expired."""
+    claims = decode_token(token)
+    return claims.user_id if claims else None

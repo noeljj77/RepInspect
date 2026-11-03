@@ -9,6 +9,7 @@ from app.core.security import (
     JWT_ALGORITHM,
     create_access_token,
     decode_access_token,
+    decode_token,
     hash_password,
     password_needs_rehash,
     verify_password,
@@ -105,3 +106,22 @@ def test_token_with_non_uuid_subject_is_rejected():
 def test_garbage_is_rejected():
     assert decode_access_token("not.a.token") is None
     assert decode_access_token("") is None
+
+
+def test_tokens_carry_a_unique_id():
+    user_id = uuid.uuid4()
+
+    assert (
+        decode_token(create_access_token(user_id)).jti
+        != decode_token(create_access_token(user_id)).jti
+    )
+
+
+def test_token_without_an_id_is_rejected():
+    token = jwt.encode(
+        {"sub": str(uuid.uuid4()), "exp": datetime.now(UTC) + timedelta(hours=1)},
+        _secret(),
+        algorithm=JWT_ALGORITHM,
+    )
+
+    assert decode_token(token) is None

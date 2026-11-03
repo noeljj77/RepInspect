@@ -14,6 +14,7 @@ from app.models.repository_analysis import (
     AnalysisStatus,
     RepositoryAnalysis,
 )
+from app.models.revoked_token import RevokedToken
 from app.models.saved_repository import SavedRepository
 from app.models.search import CodeChunk, IndexStatus, SearchIndex
 from app.models.user import User
@@ -46,6 +47,7 @@ __all__ = [
     "QuestionBatch",
     "RepositoryAnalysis",
     "RepositoryNote",
+    "RevokedToken",
     "SavedRepository",
     "SearchIndex",
     "TurnStatus",

@@ -9,8 +9,10 @@ from app import __version__
 from app.api.router import api_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.core.rate_limit import LoginLimits
+from app.core.security_headers import SecurityHeadersMiddleware
 from app.db.session import SessionLocal
-from app.services import repositories
+from app.services import repositories, sessions
 from app.services.ai import jobs as ai_jobs
 from app.services.interview import questions as interview_questions
 from app.services.mock import flow as mock_flow
@@ -34,6 +36,8 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         )
     if interrupted:
         logger.warning("Marked %d interrupted jobs as failed", interrupted)
+    with SessionLocal() as db:
+        sessions.purge_expired(db)
     yield
     get_job_runner().shutdown()
 
@@ -52,6 +56,9 @@ def create_app() -> FastAPI:
         openapi_url="/api/openapi.json" if settings.app_env != "production" else None,
     )
 
+    app.state.login_limits = LoginLimits(settings)
+
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.cookie_secure)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
