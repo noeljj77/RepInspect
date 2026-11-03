@@ -2,20 +2,11 @@ import type { RouteObject } from 'react-router'
 
 import { GuestOnly, RequireAuth } from './components/auth/RouteGuards'
 import AppLayout from './components/layout/AppLayout'
-import DashboardPage from './pages/DashboardPage'
+import { lazyElement } from './components/ui/lazyRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import RegisterPage from './pages/RegisterPage'
-import RepositoryPage from './pages/RepositoryPage'
-import ChatTab from './pages/repository/ChatTab'
-import DependenciesTab from './pages/repository/DependenciesTab'
-import FilesTab from './pages/repository/FilesTab'
-import HistoryTab from './pages/repository/HistoryTab'
-import InterviewTab from './pages/repository/InterviewTab'
-import MockInterviewPage from './pages/repository/MockInterviewPage'
-import NotesTab from './pages/repository/NotesTab'
-import OverviewTab from './pages/repository/OverviewTab'
 
 // Kept separate from App so tests can mount the same routes in a memory router.
 export const routes: RouteObject[] = [
@@ -34,19 +25,19 @@ export const routes: RouteObject[] = [
       {
         element: <AppLayout />,
         children: [
-          { path: '/dashboard', element: <DashboardPage /> },
+          { path: '/dashboard', element: lazyElement(() => import('./pages/DashboardPage')) },
           {
             path: '/repositories/:repositoryId',
-            element: <RepositoryPage />,
+            element: lazyElement(() => import('./pages/RepositoryPage')),
             children: [
-              { index: true, element: <OverviewTab /> },
-              { path: 'files', element: <FilesTab /> },
-              { path: 'dependencies', element: <DependenciesTab /> },
-              { path: 'chat', element: <ChatTab /> },
-              { path: 'interview', element: <InterviewTab /> },
-              { path: 'interview/mock/:interviewId', element: <MockInterviewPage /> },
-              { path: 'notes', element: <NotesTab /> },
-              { path: 'history', element: <HistoryTab /> },
+              { index: true, element: lazyElement(() => import('./pages/repository/OverviewTab')) },
+              { path: 'files', element: lazyElement(() => import('./pages/repository/FilesTab')) },
+              { path: 'dependencies', element: lazyElement(() => import('./pages/repository/DependenciesTab')) },
+              { path: 'chat', element: lazyElement(() => import('./pages/repository/ChatTab')) },
+              { path: 'interview', element: lazyElement(() => import('./pages/repository/InterviewTab')) },
+              { path: 'interview/mock/:interviewId', element: lazyElement(() => import('./pages/repository/MockInterviewPage')) },
+              { path: 'notes', element: lazyElement(() => import('./pages/repository/NotesTab')) },
+              { path: 'history', element: lazyElement(() => import('./pages/repository/HistoryTab')) },
             ],
           },
         ],
