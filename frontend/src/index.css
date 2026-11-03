@@ -182,3 +182,81 @@ html.theme-changing *::after {
     text-decoration: none;
   }
 }
+
+/* ---- Loading animations ---------------------------------------------------------------- */
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* A placeholder block with a light sweeping across it. */
+.skeleton {
+  background-color: var(--color-raised);
+  background-image: linear-gradient(
+    90deg,
+    transparent 30%,
+    color-mix(in srgb, var(--color-ink) 9%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+@keyframes bar-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(360%);
+  }
+}
+
+/* A progress track whose highlight keeps moving, for work with no measurable progress. */
+.bar-indeterminate > span {
+  display: block;
+  width: 30%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  animation: bar-slide 1.5s ease-in-out infinite;
+}
+
+@keyframes bar-glow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* The leading edge of a filling bar breathes, so a slow bar still looks alive. */
+.bar-live {
+  animation: bar-glow 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .bar-indeterminate > span,
+  .bar-live {
+    animation: none;
+  }
+
+  /* Without this a 0.01ms infinite animation would flicker instead of stopping. */
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+  }
+
+  .bar-indeterminate > span {
+    width: 100%;
+    opacity: 0.35;
+  }
+}

@@ -4,6 +4,7 @@ import FileTree from '../../components/repository/FileTree'
 import FileViewer from '../../components/repository/FileViewer'
 import { useFiles } from '../../hooks/useRepositories'
 import { useRepositoryContext } from '../../hooks/useRepositoryContext'
+import LoadingLine from '../../components/ui/LoadingLine'
 
 function parseLine(value: string | null): number | null {
   const line = Number(value)
@@ -25,9 +26,9 @@ export default function FilesTab() {
 
   if (isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
+      <LoadingLine>
         Loading files…
-      </p>
+      </LoadingLine>
     )
   }
   if (isError) {

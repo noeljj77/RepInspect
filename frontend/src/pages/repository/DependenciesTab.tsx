@@ -6,6 +6,7 @@ import { useDependencies } from '../../hooks/useRepositories'
 import { useRepositoryContext } from '../../hooks/useRepositoryContext'
 import { cn } from '../../lib/cn'
 import { fileLink } from '../../lib/links'
+import LoadingLine from '../../components/ui/LoadingLine'
 
 const ECOSYSTEMS: Record<string, string> = { pypi: 'Python', npm: 'npm', maven: 'Maven and Gradle' }
 const SCOPE_LABELS: Record<string, string> = {
@@ -43,9 +44,9 @@ export default function DependenciesTab() {
 
   if (isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
+      <LoadingLine>
         Loading dependencies…
-      </p>
+      </LoadingLine>
     )
   }
   if (isError) {

@@ -11,6 +11,7 @@ import { useAsk, useChat, useChats, useDeleteChat, useRetryAnswer, useSearchInde
 import { useRepositoryContext } from '../../hooks/useRepositoryContext'
 import { cn } from '../../lib/cn'
 import { formatRelativeTime } from '../../lib/format'
+import LoadingLine from '../../components/ui/LoadingLine'
 
 const SUGGESTIONS = [
   'How does the application start?',
@@ -143,9 +144,9 @@ function Conversation({ repositoryId, chatId, onDeleted }: { repositoryId: strin
 
   if (isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
+      <LoadingLine>
         Loading the conversation…
-      </p>
+      </LoadingLine>
     )
   }
   if (isError) {
@@ -212,9 +213,9 @@ export default function ChatTab() {
 
   if (isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
+      <LoadingLine>
         Checking whether chat is ready…
-      </p>
+      </LoadingLine>
     )
   }
   if (isError) {

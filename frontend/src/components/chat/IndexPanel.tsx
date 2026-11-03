@@ -3,6 +3,7 @@ import { Search } from 'lucide-react'
 import type { SearchIndex } from '../../api/chat'
 import { useBuildIndex } from '../../hooks/useChat'
 import { buttonClass } from '../ui/button'
+import Spinner from '../ui/Spinner'
 
 /** Shown instead of the chat until the repository's search index is ready. */
 export default function IndexPanel({ repositoryId, index }: { repositoryId: string; index: SearchIndex }) {
@@ -37,14 +38,22 @@ export default function IndexPanel({ repositoryId, index }: { repositoryId: stri
           aria-valuemin={0}
           aria-valuemax={total || 1}
           aria-valuenow={done}
-          className="mt-4 h-1.5 overflow-hidden rounded-full bg-raised"
+          className="relative mt-4 h-1.5 overflow-hidden rounded-full bg-raised"
         >
-          <div
-            className="h-full rounded-full bg-mark transition-[width] duration-500"
-            style={{ width: total ? `${Math.round((done / total) * 100)}%` : '4%' }}
-          />
+          {total ? (
+            <div
+              className="bar-live h-full rounded-full bg-mark transition-[width] duration-500"
+              style={{ width: `${Math.max(4, Math.round((done / total) * 100))}%` }}
+            />
+          ) : (
+            // The number of parts is not known until the files have been read.
+            <div className="bar-indeterminate absolute inset-0 text-mark">
+              <span />
+            </div>
+          )}
         </div>
-        <p role="status" className="mt-2 text-sm text-muted">
+        <p role="status" className="mt-2 flex items-center gap-2 text-sm text-muted">
+          <Spinner size={14} />
           {total
             ? `${done.toLocaleString('en')} of ${total.toLocaleString('en')} parts indexed`
             : 'Reading the files…'}

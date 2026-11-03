@@ -14,6 +14,8 @@ import { useReloadOnNewVersion, useRepository, useStartAnalysis, useUploadNewVer
 import type { RepositoryContext } from '../hooks/useRepositoryContext'
 import { cn } from '../lib/cn'
 import { formatRelativeTime } from '../lib/format'
+import Skeleton from '../components/ui/Skeleton'
+import Spinner from '../components/ui/Spinner'
 
 /** Retrying means analyzing GitHub again, or for an upload, choosing the ZIP again. */
 function RetryButton({ repository, label }: { repository: RepositoryDetail; label: string }) {
@@ -25,7 +27,12 @@ function RetryButton({ repository, label }: { repository: RepositoryDetail; labe
       {error && <p className="mt-2 text-sm text-danger">{error.message}</p>}
       {repository.source_type === 'zip' ? (
         <div className="mt-4">
-          <ZipPicker label="Upload the ZIP again" onPick={(file) => upload.mutate(file)} disabled={upload.isPending} />
+          <ZipPicker
+            label="Upload the ZIP again"
+            onPick={(file) => upload.mutate(file)}
+            disabled={upload.isPending}
+            pending={upload.isPending}
+          />
         </div>
       ) : (
         <button
@@ -34,6 +41,7 @@ function RetryButton({ repository, label }: { repository: RepositoryDetail; labe
           disabled={retry.isPending}
           className={buttonClass('secondary', 'mt-4')}
         >
+          {retry.isPending && <Spinner tone="current" />}
           {retry.isPending ? 'Starting…' : label}
         </button>
       )}
@@ -192,18 +200,18 @@ export default function RepositoryPage() {
 
   if (isPending) {
     return (
-      <div role="status" className="mx-auto max-w-6xl animate-pulse">
+      <div role="status" className="mx-auto max-w-6xl">
         <span className="sr-only">Loading repository…</span>
-        <div className="h-9 w-56 rounded-md bg-raised" />
-        <div className="mt-3 h-4 w-80 max-w-full rounded bg-raised/70" />
+        <Skeleton className="h-9 w-56" />
+        <Skeleton className="mt-3 h-4 w-80 max-w-full" />
         <div className="mt-8 flex gap-8 border-b border-line pb-3">
-          {[14, 12, 20, 14].map((width, index) => (
-            <div key={index} className="h-4 rounded bg-raised/70" style={{ width: `${width * 4}px` }} />
+          {['w-14', 'w-12', 'w-20', 'w-14'].map((width, index) => (
+            <Skeleton key={index} className={`h-4 ${width}`} />
           ))}
         </div>
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="h-64 rounded-xl border border-line bg-surface" />
-          <div className="h-64 rounded-xl border border-line bg-surface" />
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
         </div>
       </div>
     )

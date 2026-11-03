@@ -5,6 +5,9 @@ import type { AiKind, ContentByKind, Explanation } from '../../api/ai'
 import { useAiExplanation, useRequestExplanation } from '../../hooks/useAiExplanation'
 import { formatRelativeTime } from '../../lib/format'
 import { buttonClass } from '../ui/button'
+import LoadingLine from '../ui/LoadingLine'
+import WorkingNote from '../ui/WorkingNote'
+import Spinner from '../ui/Spinner'
 
 function Footer({ explanation, onRegenerate, busy }: { explanation: Explanation; onRegenerate: () => void; busy: boolean }) {
   const content = explanation.content
@@ -22,7 +25,7 @@ function Footer({ explanation, onRegenerate, busy }: { explanation: Explanation;
         {when}.
       </p>
       <button type="button" onClick={onRegenerate} disabled={busy} className={buttonClass('ghost', 'h-8 px-2 text-xs')}>
-        <RefreshCw size={13} aria-hidden="true" />
+        {busy ? <Spinner size={13} tone="hint" /> : <RefreshCw size={13} aria-hidden="true" />}
         Regenerate
       </button>
     </footer>
@@ -64,9 +67,9 @@ export default function ExplanationPanel<K extends AiKind>({
 
   if (query.isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
+      <LoadingLine>
         Checking for an earlier explanation…
-      </p>
+      </LoadingLine>
     )
   }
   if (query.isError) {
@@ -81,10 +84,9 @@ export default function ExplanationPanel<K extends AiKind>({
 
   if (explanation.status === 'pending') {
     return (
-      <p role="status" className="flex items-center gap-2.5 text-sm text-muted">
-        <span className="size-2 shrink-0 animate-pulse rounded-full bg-hint" aria-hidden="true" />
+      <WorkingNote expected={30}>
         Reading the code and writing the explanation. This usually takes 10 to 30 seconds.
-      </p>
+      </WorkingNote>
     )
   }
 
@@ -109,7 +111,7 @@ export default function ExplanationPanel<K extends AiKind>({
         <div className="max-w-prose text-sm text-muted">{intro}</div>
       )}
       <button type="button" onClick={start} disabled={busy} className={buttonClass('secondary', 'mt-3 h-9')}>
-        <Sparkles size={15} className="text-hint" aria-hidden="true" />
+        {busy ? <Spinner size={15} tone="hint" /> : <Sparkles size={15} className="text-hint" aria-hidden="true" />}
         {failed ? 'Try again' : actionLabel}
       </button>
       {requestError}

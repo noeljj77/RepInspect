@@ -1,7 +1,8 @@
-import { Check, Loader2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 
 import type { AnalysisStatus } from '../../api/repositories'
 import { cn } from '../../lib/cn'
+import Spinner from '../ui/Spinner'
 
 const steps: Array<{ status: AnalysisStatus; label: string; detail: string }> = [
   { status: 'queued', label: 'Waiting to start', detail: 'Your analysis is in the queue.' },
@@ -26,6 +27,20 @@ export default function AnalysisProgress({
       <h2 className="font-semibold">Analyzing this repository</h2>
       <p className="mt-1 text-sm text-muted">This usually takes under a minute. You can leave this page and come back.</p>
 
+      {/* One segment per step: finished ones are solid, the current one keeps moving. */}
+      <div aria-hidden="true" className="mt-5 flex gap-1.5">
+        {shown.map((step, index) => (
+          <span key={step.status} className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-raised">
+            {index < current && <span className="absolute inset-0 rounded-full bg-ok" />}
+            {index === current && (
+              <span className="bar-indeterminate absolute inset-0 block text-mark">
+                <span />
+              </span>
+            )}
+          </span>
+        ))}
+      </div>
+
       <ol className="mt-5 space-y-4" aria-live="polite">
         {shown.map((step, index) => {
           const done = index < current
@@ -43,7 +58,7 @@ export default function AnalysisProgress({
                 {done ? (
                   <Check size={12} strokeWidth={2.5} aria-hidden="true" />
                 ) : active ? (
-                  <Loader2 size={12} strokeWidth={2.5} className="animate-spin" aria-hidden="true" />
+                  <Spinner size={13} tone="current" />
                 ) : null}
               </span>
               <div>

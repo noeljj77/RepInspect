@@ -5,6 +5,7 @@ import AuthShell from '../components/auth/AuthShell'
 import { buttonClass } from '../components/ui/button'
 import TextField from '../components/ui/TextField'
 import { useRegister } from '../hooks/useAuth'
+import Spinner from '../components/ui/Spinner'
 
 export default function RegisterPage() {
   const [displayName, setDisplayName] = useState('')
@@ -73,6 +74,7 @@ export default function RegisterPage() {
         )}
 
         <button type="submit" disabled={register.isPending} className={buttonClass('primary', 'w-full')}>
+          {register.isPending && <Spinner tone="current" />}
           {register.isPending ? 'Creating account…' : 'Create account'}
         </button>
       </form>

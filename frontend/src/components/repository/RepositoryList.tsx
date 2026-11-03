@@ -8,6 +8,8 @@ import { cn } from '../../lib/cn'
 import { formatCount, formatRelativeTime } from '../../lib/format'
 import { buttonClass } from '../ui/button'
 import StatusBadge from './StatusBadge'
+import Skeleton from '../ui/Skeleton'
+import Spinner from '../ui/Spinner'
 
 // The same calm palette as the language bar on the repository page.
 const LANGUAGE_COLORS = ['#f2c14e', '#93a4f5', '#7fd1a4']
@@ -166,7 +168,7 @@ function EmptyLibrary() {
           onClick={() => add.mutate(SAMPLE_URL, { onSuccess: (repository) => navigate(`/repositories/${repository.id}`) })}
           className={buttonClass('secondary', 'h-9 px-3')}
         >
-          <Sparkles size={15} className="text-mark-text" aria-hidden="true" />
+          {add.isPending ? <Spinner size={15} /> : <Sparkles size={15} className="text-mark-text" aria-hidden="true" />}
           {add.isPending ? 'Adding…' : 'Try it with pallets/click'}
         </button>
         <span className="text-sm text-faint">A small, well-known project. It takes under a minute.</span>
@@ -187,9 +189,15 @@ export default function RepositoryList() {
 
   if (isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
-        Loading your repositories…
-      </p>
+      <div role="status" aria-label="Loading your repositories" className="overflow-hidden rounded-xl border border-line bg-surface">
+        <span className="sr-only">Loading your repositories…</span>
+        {[0, 1, 2].map((row) => (
+          <div key={row} className="space-y-2.5 border-b border-line py-4 pr-5 pl-5 last:border-b-0">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-3/5" />
+          </div>
+        ))}
+      </div>
     )
   }
 

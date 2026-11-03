@@ -9,6 +9,7 @@ import { fileLink } from '../../lib/links'
 import FileExplanation from '../ai/FileExplanation'
 import FileNotes from '../library/FileNotes'
 import CodeViewer from './CodeViewer'
+import LoadingLine from '../ui/LoadingLine'
 
 const KIND_LABELS: Record<string, string> = {
   function: 'function',
@@ -121,9 +122,9 @@ export default function FileViewer({ repositoryId, path, line, onSelectLine }: P
 
   if (isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
+      <LoadingLine>
         Loading {path}…
-      </p>
+      </LoadingLine>
     )
   }
   if (isError) {

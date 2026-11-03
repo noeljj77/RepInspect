@@ -11,6 +11,8 @@ import { useRepositoryContext } from '../../hooks/useRepositoryContext'
 import { cn } from '../../lib/cn'
 import { mockReportMarkdown } from '../../lib/exportReport'
 import { fileLink } from '../../lib/links'
+import LoadingLine from '../../components/ui/LoadingLine'
+import WorkingNote from '../../components/ui/WorkingNote'
 
 /** Minutes and seconds since the question was asked: interviews have a pace. */
 function Elapsed({ since }: { since: string }) {
@@ -86,10 +88,9 @@ function TurnView({ repositoryId, interview, turn, number }: { repositoryId: str
         <blockquote className="mt-3 border-l-2 border-line pl-3 text-sm whitespace-pre-wrap text-ink/80">{turn.answer}</blockquote>
       )}
       {turn.status === 'grading' && (
-        <p role="status" className="mt-3 flex items-center gap-2.5 text-sm text-muted">
-          <span className="size-2 shrink-0 animate-pulse rounded-full bg-hint" aria-hidden="true" />
+        <WorkingNote className="mt-3" expected={15}>
           Checking your answer against the code…
-        </p>
+        </WorkingNote>
       )}
       {turn.status === 'skipped' && <p className="mt-2 text-sm text-muted">Skipped.</p>}
       {turn.status === 'cancelled' && <p className="mt-2 text-sm text-muted">Not answered: the interview ended.</p>}
@@ -228,9 +229,9 @@ export default function MockInterviewPage() {
     return (
       <div>
         {header}
-        <p role="status" className="text-sm text-muted">
+        <LoadingLine>
           Loading the interview…
-        </p>
+        </LoadingLine>
       </div>
     )
   }
@@ -286,10 +287,9 @@ export default function MockInterviewPage() {
       )}
 
       {interview.status === 'preparing' && (
-        <p role="status" className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-muted">
-          <span className="size-2 shrink-0 animate-pulse rounded-full bg-hint" aria-hidden="true" />
+        <WorkingNote boxed expected={30}>
           Writing questions from the code first. This usually takes 10 to 30 seconds.
-        </p>
+        </WorkingNote>
       )}
       {interview.status === 'failed' && (
         <p role="alert" className="text-sm text-danger">

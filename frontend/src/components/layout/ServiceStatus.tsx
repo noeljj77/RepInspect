@@ -32,7 +32,7 @@ export default function ServiceStatus() {
       <summary className="flex cursor-pointer list-none items-center gap-2 text-muted hover:text-ink">
         <span
           aria-hidden="true"
-          className={cn('size-1.5 rounded-full', isPending ? 'bg-faint' : allOk ? 'bg-ok' : 'bg-danger')}
+          className={cn('size-1.5 rounded-full', isPending ? 'animate-pulse bg-mark' : allOk ? 'bg-ok' : 'bg-danger')}
         />
         {summary}
       </summary>

@@ -1,13 +1,10 @@
 import { Navigate, Outlet, useLocation } from 'react-router'
 
 import { useCurrentUser } from '../../hooks/useAuth'
+import FullPageLoader from '../ui/FullPageLoader'
 
 function CheckingSession() {
-  return (
-    <div role="status" className="grid min-h-dvh place-items-center text-sm text-muted">
-      Checking your session…
-    </div>
-  )
+  return <FullPageLoader>Checking your session…</FullPageLoader>
 }
 
 /** Wraps routes that need a logged-in user; guests are sent to the login page. */

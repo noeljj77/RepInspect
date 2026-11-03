@@ -8,6 +8,7 @@ import { useRepositoryContext } from '../../hooks/useRepositoryContext'
 import { cn } from '../../lib/cn'
 import { formatDate, formatRelativeTime } from '../../lib/format'
 import { fileLink } from '../../lib/links'
+import LoadingLine from '../../components/ui/LoadingLine'
 
 function PathList({
   title,
@@ -142,9 +143,9 @@ function Version({
           {open && (
             <div className="mt-3 rounded-lg border border-line bg-surface p-4">
               {changes.isPending ? (
-                <p role="status" className="text-sm text-muted">
+                <LoadingLine>
                   Comparing with the previous version…
-                </p>
+                </LoadingLine>
               ) : changes.isError ? (
                 <p role="alert" className="text-sm text-danger">
                   The comparison could not be loaded.
@@ -181,9 +182,9 @@ export default function HistoryTab() {
         Notes, labels and collections stay with the repository; older versions keep their file list, not their files.
       </p>
       {isPending ? (
-        <p role="status" className="text-sm text-muted">
+        <LoadingLine>
           Loading versions…
-        </p>
+        </LoadingLine>
       ) : isError ? (
         <p role="alert" className="text-sm text-danger">
           The version history could not be loaded.

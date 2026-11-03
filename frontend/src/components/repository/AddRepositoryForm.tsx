@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router'
 import { useAddRepository, useUploadZip } from '../../hooks/useRepositories'
 import { ZipPicker } from '../library/RepositoryActions'
 import { buttonClass } from '../ui/button'
+import Spinner from '../ui/Spinner'
 
 /** One bar: paste a GitHub link, or upload a ZIP instead. */
 export default function AddRepositoryForm() {
@@ -50,6 +51,7 @@ export default function AddRepositoryForm() {
           />
         </div>
         <button type="submit" disabled={add.isPending} className={buttonClass('primary', 'sm:w-32')}>
+          {add.isPending && <Spinner tone="current" />}
           {add.isPending ? 'Adding…' : 'Analyze'}
         </button>
       </div>
@@ -59,6 +61,7 @@ export default function AddRepositoryForm() {
           label={upload.isPending ? 'Uploading…' : 'Upload a ZIP'}
           onPick={(file) => upload.mutate(file, { onSuccess: open })}
           disabled={upload.isPending}
+          pending={upload.isPending}
           variant="ghost"
         />
       </div>

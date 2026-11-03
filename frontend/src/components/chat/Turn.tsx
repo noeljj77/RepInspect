@@ -7,6 +7,7 @@ import { fileLink } from '../../lib/links'
 import { CitationLink, UngroundedPaths } from '../ai/Findings'
 import { buttonClass } from '../ui/button'
 import AnswerText from './AnswerText'
+import WorkingNote from '../ui/WorkingNote'
 
 const MATCH_LABELS: Record<string, string> = {
   meaning: 'similar meaning',
@@ -56,10 +57,7 @@ function Answer({
 }) {
   if (message.status === 'pending') {
     return (
-      <p role="status" className="flex items-center gap-2.5 text-sm text-muted">
-        <span className="size-2 shrink-0 animate-pulse rounded-full bg-hint" aria-hidden="true" />
-        Searching the code and writing an answer…
-      </p>
+      <WorkingNote expected={20}>Searching the code and writing an answer…</WorkingNote>
     )
   }
   if (message.status === 'failed' || !message.details) {

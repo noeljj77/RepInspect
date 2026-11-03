@@ -5,16 +5,20 @@ import { useNavigate } from 'react-router'
 import { isInProgress, type RepositoryDetail } from '../../api/repositories'
 import { useDeleteRepository, useStartAnalysis, useUploadNewVersion } from '../../hooks/useRepositories'
 import { buttonClass } from '../ui/button'
+import Spinner from '../ui/Spinner'
 
 /** Pick a .zip with a hidden file input, from a normal button. */
 export function ZipPicker({
   onPick,
   disabled,
+  pending,
   label,
   variant = 'secondary',
 }: {
   onPick: (file: File) => void
   disabled?: boolean
+  /** An upload is in progress: show a spinner. */
+  pending?: boolean
   label: string
   variant?: 'primary' | 'secondary' | 'ghost'
 }) {
@@ -40,7 +44,7 @@ export function ZipPicker({
         disabled={disabled}
         className={buttonClass(variant, 'h-9 px-3')}
       >
-        <Upload size={15} aria-hidden="true" />
+        {pending ? <Spinner size={15} /> : <Upload size={15} aria-hidden="true" />}
         {label}
       </button>
     </>
@@ -74,6 +78,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
             label="Upload new version"
             onPick={(file) => upload.mutate(file)}
             disabled={busy || upload.isPending}
+            pending={upload.isPending}
           />
         ) : (
           <button

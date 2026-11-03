@@ -9,6 +9,9 @@ import { buttonClass } from '../../components/ui/button'
 import { useGenerateQuestions, useQuestions } from '../../hooks/useInterview'
 import { useRepositoryContext } from '../../hooks/useRepositoryContext'
 import { cn } from '../../lib/cn'
+import LoadingLine from '../../components/ui/LoadingLine'
+import WorkingNote from '../../components/ui/WorkingNote'
+import Spinner from '../../components/ui/Spinner'
 
 const CATEGORIES = Object.keys(CATEGORY_LABELS) as Category[]
 
@@ -99,7 +102,7 @@ function GenerateForm({ repositoryId, hasQuestions }: { repositoryId: string; ha
           </select>
         </label>
         <button type="submit" disabled={generate.isPending} className={buttonClass('secondary', 'h-9')}>
-          <Sparkles size={15} className="text-hint" aria-hidden="true" />
+          {generate.isPending ? <Spinner size={15} tone="hint" /> : <Sparkles size={15} className="text-hint" aria-hidden="true" />}
           {hasQuestions ? `Add ${count} more questions` : `Write ${count} questions`}
         </button>
       </div>
@@ -125,9 +128,9 @@ function Practice({ repositoryId, version }: { repositoryId: string; version: nu
 
   if (isPending) {
     return (
-      <p role="status" className="text-sm text-muted">
+      <LoadingLine>
         Loading questions…
-      </p>
+      </LoadingLine>
     )
   }
   if (isError) {
@@ -145,10 +148,9 @@ function Practice({ repositoryId, version }: { repositoryId: string; version: nu
     <div className="space-y-5">
       <ProgressBar progress={data.progress} />
       {batch?.status === 'pending' ? (
-        <p role="status" className="flex items-center gap-2.5 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-muted">
-          <span className="size-2 shrink-0 animate-pulse rounded-full bg-hint" aria-hidden="true" />
+        <WorkingNote boxed expected={30}>
           Writing {batch.requested_count} questions from the code. This usually takes 10 to 30 seconds.
-        </p>
+        </WorkingNote>
       ) : (
         <GenerateForm repositoryId={repositoryId} hasQuestions={data.questions.length > 0} />
       )}

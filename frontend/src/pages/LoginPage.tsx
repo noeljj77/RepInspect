@@ -5,6 +5,7 @@ import AuthShell from '../components/auth/AuthShell'
 import { buttonClass } from '../components/ui/button'
 import TextField from '../components/ui/TextField'
 import { useLogin } from '../hooks/useAuth'
+import Spinner from '../components/ui/Spinner'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -61,6 +62,7 @@ export default function LoginPage() {
         )}
 
         <button type="submit" disabled={login.isPending} className={buttonClass('primary', 'w-full')}>
+          {login.isPending && <Spinner tone="current" />}
           {login.isPending ? 'Logging in…' : 'Log in'}
         </button>
       </form>

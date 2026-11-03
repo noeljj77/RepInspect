@@ -1,6 +1,7 @@
 import NoteList, { NoteForm } from '../../components/library/NoteList'
 import { useNotes } from '../../hooks/useLibrary'
 import { useRepositoryContext } from '../../hooks/useRepositoryContext'
+import LoadingLine from '../../components/ui/LoadingLine'
 
 export default function NotesTab() {
   const { repository } = useRepositoryContext()
@@ -13,9 +14,9 @@ export default function NotesTab() {
           Your notes
         </h2>
         {isPending ? (
-          <p role="status" className="text-sm text-muted">
+          <LoadingLine>
             Loading notes…
-          </p>
+          </LoadingLine>
         ) : isError ? (
           <p role="alert" className="text-sm text-danger">
             Your notes could not be loaded. Try refreshing the page.
