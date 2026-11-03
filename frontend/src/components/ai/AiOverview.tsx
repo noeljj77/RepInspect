@@ -8,7 +8,7 @@ function Section({ repositoryId, section }: { repositoryId: string; section: Ove
   return (
     <section
       aria-labelledby={headingId}
-      className="grid gap-x-6 gap-y-2 border-t border-line py-5 first:border-t-0 first:pt-0 last:pb-0 md:grid-cols-[11rem_minmax(0,1fr)]"
+      className="grid gap-x-6 gap-y-2 border-t border-line py-5 first:border-t-0 first:pt-0 last:pb-0 @lg:grid-cols-[11rem_minmax(0,1fr)]"
     >
       <h3 id={headingId} className={cn('font-medium', !section.determined && 'text-muted')}>
         {section.title}
@@ -41,7 +41,7 @@ function Overview({ repositoryId, content }: { repositoryId: string; content: Ov
 
 export default function AiOverview({ repositoryId }: { repositoryId: string }) {
   return (
-    <section aria-labelledby="ai-overview-heading" className="rounded-xl border border-line bg-surface p-5">
+    <section aria-labelledby="ai-overview-heading" className="@container rounded-xl border border-line bg-surface p-5">
       <h2 id="ai-overview-heading" className="mb-4 font-semibold">
         How this project works
       </h2>

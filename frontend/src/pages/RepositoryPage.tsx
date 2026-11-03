@@ -100,7 +100,7 @@ function TabLink({ tab }: { tab: Tab }) {
       end={tab.end}
       className={({ isActive }) =>
         cn(
-          '-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition-colors',
+          'flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition-colors',
           isActive ? 'border-mark text-ink' : 'border-transparent text-muted hover:text-ink',
         )
       }
@@ -134,7 +134,7 @@ function Tabs({ repository }: { repository: RepositoryDetail }) {
   return (
     <nav
       aria-label="Repository sections"
-      className="sticky top-0 z-20 mb-6 flex items-center overflow-x-auto border-b border-line bg-canvas/95 backdrop-blur"
+      className="sticky top-0 z-20 mb-6 flex items-center overflow-x-auto overflow-y-hidden bg-canvas/95 shadow-[inset_0_-1px_0_var(--color-line)] backdrop-blur"
     >
       {explore.map((tab) => (
         <TabLink key={tab.label} tab={tab} />
@@ -192,10 +192,19 @@ export default function RepositoryPage() {
 
   if (isPending) {
     return (
-      <div className="mx-auto max-w-6xl">
-        <p role="status" className="text-muted">
-          Loading repository…
-        </p>
+      <div role="status" className="mx-auto max-w-6xl animate-pulse">
+        <span className="sr-only">Loading repository…</span>
+        <div className="h-9 w-56 rounded-md bg-raised" />
+        <div className="mt-3 h-4 w-80 max-w-full rounded bg-raised/70" />
+        <div className="mt-8 flex gap-8 border-b border-line pb-3">
+          {[14, 12, 20, 14].map((width, index) => (
+            <div key={index} className="h-4 rounded bg-raised/70" style={{ width: `${width * 4}px` }} />
+          ))}
+        </div>
+        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="h-64 rounded-xl border border-line bg-surface" />
+          <div className="h-64 rounded-xl border border-line bg-surface" />
+        </div>
       </div>
     )
   }

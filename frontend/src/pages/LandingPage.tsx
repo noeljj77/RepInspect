@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 
 import AnnotatedCode from '../components/landing/AnnotatedCode'
+import DemoPlayer from '../components/landing/DemoPlayer'
 import QuestionPreview from '../components/landing/QuestionPreview'
 import PublicHeader from '../components/layout/PublicHeader'
 import { buttonClass } from '../components/ui/button'
@@ -62,15 +63,20 @@ export default function LandingPage() {
             <h2 className="max-w-xl text-3xl leading-tight font-semibold tracking-tight">
               From an unfamiliar repository to a confident explanation
             </h2>
-            <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
-              {steps.map((step, index) => (
-                <li key={step.title} className="border-t-2 border-line pt-5 first:border-mark">
-                  <span className="text-sm text-faint">Step {index + 1}</span>
-                  <h3 className="mt-1 text-xl font-semibold">{step.title}</h3>
-                  <p className="mt-3 max-w-sm leading-relaxed text-muted">{step.body}</p>
-                </li>
-              ))}
-            </ol>
+            <div className="mt-12 grid items-start gap-12 lg:grid-cols-12 lg:gap-10">
+              <ol className="space-y-9 lg:col-span-4">
+                {steps.map((step, index) => (
+                  <li key={step.title} className="border-l-2 border-line pl-5">
+                    <span className="text-sm text-faint">Step {index + 1}</span>
+                    <h3 className="mt-1 text-xl font-semibold">{step.title}</h3>
+                    <p className="mt-2 max-w-sm leading-relaxed text-muted">{step.body}</p>
+                  </li>
+                ))}
+              </ol>
+              <div className="min-w-0 lg:col-span-8">
+                <DemoPlayer />
+              </div>
+            </div>
           </div>
         </section>
 

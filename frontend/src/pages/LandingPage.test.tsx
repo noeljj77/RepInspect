@@ -35,6 +35,17 @@ describe('LandingPage', () => {
     ])
   })
 
+  it('shows a recording of the app, with a still for reduced motion', () => {
+    mockApi({ 'GET /api/auth/me': loggedOut })
+    renderRoute('/')
+
+    expect(screen.getByRole('img', { name: /Recording of RepInspect/ })).toHaveAttribute('src', '/how-it-works.gif')
+    expect(document.querySelector('source[media="(prefers-reduced-motion: reduce)"]')).toHaveAttribute(
+      'srcset',
+      '/how-it-works-still.png',
+    )
+  })
+
   it('lets the example question status be changed', async () => {
     const user = userEvent.setup()
     mockApi({ 'GET /api/auth/me': loggedOut })

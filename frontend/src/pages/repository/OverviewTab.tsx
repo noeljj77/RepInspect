@@ -78,7 +78,7 @@ export default function OverviewTab() {
   const languages = Object.keys(programmingLines).length > 0 ? programmingLines : analysis.languages
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="min-w-0 space-y-6">
         <AiOverview repositoryId={repository.id} />
 
