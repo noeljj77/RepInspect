@@ -1,12 +1,15 @@
-import { ChevronRight, FileArchive, Search, X } from 'lucide-react'
+import { FileArchive, Search, X } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router'
 
 import type { RepositorySummary } from '../../api/repositories'
 import { useCollections } from '../../hooks/useLibrary'
 import { useRepositories } from '../../hooks/useRepositories'
 import { cn } from '../../lib/cn'
-import { formatRelativeTime } from '../../lib/format'
+import { formatCount, formatRelativeTime } from '../../lib/format'
 import StatusBadge from './StatusBadge'
+
+// The same calm palette as the language bar on the repository page.
+const LANGUAGE_COLORS = ['#f2c14e', '#93a4f5', '#7fd1a4']
 
 function matches(repository: RepositorySummary, query: string): boolean {
   const text = [repository.owner, repository.name, repository.description, ...repository.labels]
@@ -37,6 +40,71 @@ function useFilters() {
   }
 }
 
+function Languages({ repository }: { repository: RepositorySummary }) {
+  // Absent when talking to an older server during a deploy.
+  const languages = repository.languages ?? []
+  if (languages.length === 0) return null
+  return (
+    <span className="flex items-center gap-2">
+      <span aria-hidden="true" className="flex h-1.5 w-14 overflow-hidden rounded-full bg-line">
+        {languages.map((language, index) => (
+          <span key={language.name} style={{ width: `${language.share * 100}%`, background: LANGUAGE_COLORS[index] }} />
+        ))}
+      </span>
+      <span>
+        {languages
+          .slice(0, 2)
+          .map((language) => language.name)
+          .join(', ')}
+      </span>
+    </span>
+  )
+}
+
+function Row({ repository }: { repository: RepositorySummary }) {
+  const analysis = repository.latest_analysis
+  return (
+    <li>
+      <Link
+        to={`/repositories/${repository.id}`}
+        className="group grid gap-x-4 gap-y-1.5 px-5 py-4 transition-colors hover:bg-raised/50 sm:grid-cols-[minmax(0,1fr)_auto]"
+      >
+        <div className="min-w-0">
+          <p className="flex min-w-0 items-center gap-2">
+            {repository.source_type === 'zip' && (
+              <FileArchive size={14} className="shrink-0 text-muted" aria-label="Uploaded ZIP" />
+            )}
+            <span className="truncate font-medium group-hover:text-mark">
+              {repository.owner && <span className="font-normal text-muted">{repository.owner}/</span>}
+              {repository.name}
+            </span>
+          </p>
+          {repository.description && (
+            <p className="mt-0.5 line-clamp-1 text-sm text-muted">{repository.description}</p>
+          )}
+        </div>
+        <div className="sm:row-span-2 sm:self-center">
+          {analysis && <StatusBadge status={analysis.status} />}
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-faint">
+          <Languages repository={repository} />
+          {repository.code_lines != null && <span>{formatCount(repository.code_lines)} lines</span>}
+          <span>
+            {analysis?.completed_at
+              ? `Analyzed ${formatRelativeTime(analysis.completed_at)}`
+              : `Added ${formatRelativeTime(repository.created_at)}`}
+          </span>
+          {repository.labels.map((label) => (
+            <span key={label} className="rounded-full bg-raised px-2 py-px text-[11px] text-muted">
+              {label}
+            </span>
+          ))}
+        </div>
+      </Link>
+    </li>
+  )
+}
+
 export default function RepositoryList() {
   const { data, isPending, isError, refetch } = useRepositories()
   const { data: collections = [] } = useCollections()
@@ -63,11 +131,11 @@ export default function RepositoryList() {
 
   if (data.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-line px-6 py-8">
+      <div className="rounded-xl border border-dashed border-line px-6 py-10">
         <h3 className="font-semibold">No repositories yet</h3>
         <p className="mt-1.5 max-w-md text-sm text-muted">
-          Paste a GitHub link or upload a ZIP above. Repositories you analyze are saved here so you can come back
-          to them.
+          Paste a GitHub link or upload a ZIP above. Each one is analyzed once and saved here, ready to explore,
+          chat with and practise on.
         </p>
       </div>
     )
@@ -97,6 +165,21 @@ export default function RepositoryList() {
             className="h-9 w-full rounded-md border border-line bg-canvas pr-3 pl-9 text-sm placeholder:text-faint focus:border-mark focus:outline-none"
           />
         </label>
+        {collections.length > 0 && (
+          <select
+            aria-label="Collection"
+            value={filters.collection ?? ''}
+            onChange={(event) => filters.set('collection', event.target.value || null)}
+            className="h-9 rounded-md border border-line bg-canvas px-2 text-sm text-ink"
+          >
+            <option value="">All collections</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        )}
         {collection && (
           <span className="inline-flex items-center gap-1 rounded-full border border-mark/40 py-0.5 pr-1 pl-2.5 text-xs text-mark">
             In {collection.name}
@@ -144,38 +227,7 @@ export default function RepositoryList() {
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
           {shown.map((repository) => (
-            <li key={repository.id}>
-              <Link
-                to={`/repositories/${repository.id}`}
-                className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-raised/60"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-2 truncate font-medium">
-                    {repository.source_type === 'zip' && (
-                      <FileArchive size={14} className="shrink-0 text-muted" aria-label="Uploaded ZIP" />
-                    )}
-                    <span className="truncate">
-                      {repository.owner ? `${repository.owner}/` : ''}
-                      {repository.name}
-                    </span>
-                  </p>
-                  <p className="mt-0.5 truncate text-sm text-muted">
-                    {repository.description ?? `Added ${formatRelativeTime(repository.created_at)}`}
-                  </p>
-                  {repository.labels.length > 0 && (
-                    <p className="mt-1.5 flex flex-wrap gap-1">
-                      {repository.labels.map((label) => (
-                        <span key={label} className="rounded-full bg-raised px-2 py-px text-[11px] text-muted">
-                          {label}
-                        </span>
-                      ))}
-                    </p>
-                  )}
-                </div>
-                {repository.latest_analysis && <StatusBadge status={repository.latest_analysis.status} />}
-                <ChevronRight size={16} className="shrink-0 text-faint" aria-hidden="true" />
-              </Link>
-            </li>
+            <Row key={repository.id} repository={repository} />
           ))}
         </ul>
       )}

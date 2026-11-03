@@ -22,7 +22,7 @@ describe('DashboardPage', () => {
     mockApi(dashboardApi())
     renderRoute('/dashboard')
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your library' })).toBeInTheDocument()
   })
 
   it('marks Dashboard as the active navigation item', async () => {

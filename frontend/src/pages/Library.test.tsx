@@ -67,7 +67,8 @@ describe('Dashboard: library', () => {
       'POST /api/collections': { status: 201, body: { ...COLLECTION, id: 'c2', name: 'Python' } },
     })
 
-    await user.type(await screen.findByRole('textbox', { name: 'New collection name' }), 'Python{Enter}')
+    await user.click(await screen.findByRole('button', { name: 'New collection' }))
+    await user.type(screen.getByRole('textbox', { name: 'New collection name' }), 'Python{Enter}')
 
     expect(body(fetchMock, 'POST', '/api/collections')).toEqual({ name: 'Python' })
   })
@@ -182,7 +183,8 @@ describe('Repository page: labels, collections, refresh and delete', () => {
       'GET /api/repositories': { body: [] },
     })
 
-    await user.click(await screen.findByRole('button', { name: 'Delete' }))
+    await user.click(await screen.findByLabelText('More'))
+    await user.click(screen.getByRole('button', { name: 'Delete' }))
     expect(calls(fetchMock, 'DELETE', base)).toHaveLength(0)
     expect(screen.getByText(/Removes the repository, its versions, notes/)).toBeInTheDocument()
 

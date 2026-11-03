@@ -116,6 +116,9 @@ interface RepositoryBase {
 export interface RepositorySummary extends RepositoryBase {
   description: string | null
   latest_analysis: AnalysisSummary | null
+  /** The main languages by lines of code (share from 0 to 1), for the library list. */
+  languages: Array<{ name: string; share: number }>
+  code_lines: number | null
 }
 
 export interface RepositoryDetail extends RepositoryBase {

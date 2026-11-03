@@ -186,8 +186,9 @@ describe('Dependencies tab', () => {
     expect(within(select).getAllByRole('option').map((o) => o.textContent)).toEqual(['All types', 'Runtime', 'Development'])
     await user.selectOptions(select, 'dev')
 
-    expect(screen.getByText('pytest')).toBeInTheDocument()
-    expect(screen.queryByText('flask')).not.toBeInTheDocument()
+    const main = within(screen.getAllByRole('table')[0])
+    expect(main.getByText('pytest')).toBeInTheDocument()
+    expect(main.queryByText('flask')).not.toBeInTheDocument()
   })
 
   it('says so when filters match nothing', async () => {

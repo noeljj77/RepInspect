@@ -222,6 +222,8 @@ export function repositorySummary(overrides: Partial<RepositorySummary> = {}): R
     description: 'The Python micro framework',
     created_at: '2026-11-02T10:00:00Z',
     latest_analysis: analysisSummary(),
+    languages: [{ name: 'Python', share: 0.9 }],
+    code_lines: 9000,
     ...overrides,
   }
 }

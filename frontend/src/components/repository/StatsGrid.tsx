@@ -4,7 +4,7 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
   return (
     <div>
       <dt className="text-sm text-muted">{label}</dt>
-      <dd className="mt-0.5 text-2xl font-semibold tabular-nums">{value.toLocaleString('en')}</dd>
+      <dd className="mt-0.5 text-xl font-semibold tabular-nums">{value.toLocaleString('en')}</dd>
       {hint && <p className="mt-0.5 text-xs text-faint">{hint}</p>}
     </div>
   )
@@ -21,7 +21,7 @@ export default function StatsGrid({ stats }: { stats: CodeStats }) {
       <h2 id="stats-heading" className="font-semibold">
         Statistics
       </h2>
-      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 lg:grid-cols-6">
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5">
         <Stat label="Files" value={totals.files} />
         <Stat label="Lines of code" value={totals.code_lines} />
         <Stat label="Functions and methods" value={functions} />

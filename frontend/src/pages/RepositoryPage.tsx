@@ -72,7 +72,6 @@ function RefreshBanner({ repository }: { repository: RepositoryDetail }) {
 }
 
 function FailedCard({ repository, message }: { repository: RepositoryDetail; message: string }) {
-
   return (
     <section role="alert" className="rounded-xl border border-danger/30 bg-surface p-6">
       <div className="flex gap-3">
@@ -87,40 +86,95 @@ function FailedCard({ repository, message }: { repository: RepositoryDetail; mes
   )
 }
 
+interface Tab {
+  to: string
+  label: string
+  end?: boolean
+  count?: number
+}
+
+function TabLink({ tab }: { tab: Tab }) {
+  return (
+    <NavLink
+      to={tab.to}
+      end={tab.end}
+      className={({ isActive }) =>
+        cn(
+          '-mb-px flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2.5 text-sm transition-colors',
+          isActive ? 'border-mark text-ink' : 'border-transparent text-muted hover:text-ink',
+        )
+      }
+    >
+      {tab.label}{' '}
+      {tab.count !== undefined && (
+        <span className="rounded-full bg-raised px-1.5 text-xs text-muted tabular-nums">
+          {tab.count.toLocaleString('en')}
+        </span>
+      )}
+    </NavLink>
+  )
+}
+
+/** Two groups: understanding the code, then preparing to talk about it. */
 function Tabs({ repository }: { repository: RepositoryDetail }) {
   const base = `/repositories/${repository.id}`
   const totals = repository.current_analysis?.code_stats?.totals
-  const tabs = [
+  const explore: Tab[] = [
     { to: base, label: 'Overview', end: true },
     { to: `${base}/files`, label: 'Files', count: repository.current_analysis?.file_count },
     { to: `${base}/dependencies`, label: 'Dependencies', count: totals?.dependencies },
+    { to: `${base}/history`, label: 'History' },
+  ]
+  const prepare: Tab[] = [
     { to: `${base}/chat`, label: 'Chat' },
     { to: `${base}/interview`, label: 'Interview' },
     { to: `${base}/notes`, label: 'Notes' },
-    { to: `${base}/history`, label: 'History' },
   ]
 
   return (
-    <nav aria-label="Repository sections" className="mb-6 flex gap-1 overflow-x-auto border-b border-line">
-      {tabs.map((tab) => (
-        <NavLink
-          key={tab.label}
-          to={tab.to}
-          end={tab.end}
-          className={({ isActive }) =>
-            cn(
-              '-mb-px flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm transition-colors',
-              isActive ? 'border-mark text-ink' : 'border-transparent text-muted hover:text-ink',
-            )
-          }
-        >
-          {tab.label}{' '}
-          {tab.count !== undefined && (
-            <span className="rounded-full bg-raised px-1.5 text-xs text-muted">{tab.count.toLocaleString('en')}</span>
-          )}
-        </NavLink>
+    <nav
+      aria-label="Repository sections"
+      className="sticky top-0 z-20 mb-6 flex items-center overflow-x-auto border-b border-line bg-canvas/95 backdrop-blur"
+    >
+      {explore.map((tab) => (
+        <TabLink key={tab.label} tab={tab} />
+      ))}
+      <span aria-hidden="true" className="mx-2 h-4 w-px shrink-0 bg-line" />
+      {prepare.map((tab) => (
+        <TabLink key={tab.label} tab={tab} />
       ))}
     </nav>
+  )
+}
+
+function Meta({ repository }: { repository: RepositoryDetail }) {
+  const shown = repository.current_analysis
+  const badge = shown ?? repository.latest_analysis
+  const githubUrl = shown?.github_metadata?.html_url ?? repository.source_url
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted">
+      {badge && <StatusBadge status={badge.status} />}
+      {repository.source_type === 'zip' ? (
+        <span className="inline-flex items-center gap-1.5">
+          <FileArchive size={14} aria-hidden="true" />
+          Uploaded as a ZIP file
+        </span>
+      ) : (
+        githubUrl && (
+          <a href={githubUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 hover:text-ink">
+            View on GitHub
+            <ExternalLink size={13} aria-hidden="true" />
+          </a>
+        )
+      )}
+      {shown?.commit_sha && (
+        <span>
+          Commit <span className="font-mono text-[13px] text-ink/80">{shown.commit_sha.slice(0, 7)}</span>
+        </span>
+      )}
+      {shown?.completed_at && <span>Analyzed {formatRelativeTime(shown.completed_at)}</span>}
+      {shown && shown.version > 1 && <span>Version {shown.version}</span>}
+    </div>
   )
 }
 
@@ -139,8 +193,7 @@ export default function RepositoryPage() {
   if (isPending) {
     return (
       <div className="mx-auto max-w-6xl">
-        {back}
-        <p role="status" className="mt-6 text-muted">
+        <p role="status" className="text-muted">
           Loading repository…
         </p>
       </div>
@@ -164,50 +217,28 @@ export default function RepositoryPage() {
 
   const analysis = repository.latest_analysis
   const shown = repository.current_analysis
-  const badge = shown ?? analysis
   const description = shown?.github_metadata?.description
-  const githubUrl = shown?.github_metadata?.html_url ?? repository.source_url
   // The newest finished version is shown, even while a newer one is being analyzed.
   const context: RepositoryContext | null = shown ? { repository, analysis: shown } : null
 
   return (
     <div className="mx-auto max-w-6xl">
-      {back}
-
-      <header className="mt-5 mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <header className="mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-3xl font-semibold tracking-tight break-all">
-              {repository.owner ? `${repository.owner}/` : ''}
+              {repository.owner && <span className="font-normal text-muted">{repository.owner}/</span>}
               {repository.name}
             </h1>
-            {badge && <StatusBadge status={badge.status} />}
+            {description && <p className="mt-2 max-w-2xl text-lg text-muted">{description}</p>}
           </div>
-          {description && <p className="mt-3 max-w-2xl text-lg text-muted">{description}</p>}
-          {repository.source_type === 'zip' ? (
-            <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted">
-              <FileArchive size={14} aria-hidden="true" />
-              Uploaded as a ZIP file
-            </p>
-          ) : (
-            githubUrl && (
-              <a
-                href={githubUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink"
-              >
-                View on GitHub
-                <ExternalLink size={13} aria-hidden="true" />
-              </a>
-            )
-          )}
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <LabelEditor repositoryId={repository.id} labels={repository.labels} />
-            <CollectionPicker repositoryId={repository.id} memberOf={repository.collection_ids} />
-          </div>
+          <RepositoryActions repository={repository} />
         </div>
-        <RepositoryActions repository={repository} />
+        <Meta repository={repository} />
+        <div className="mt-4 flex flex-wrap items-center gap-1.5">
+          <LabelEditor repositoryId={repository.id} labels={repository.labels} />
+          <CollectionPicker repositoryId={repository.id} memberOf={repository.collection_ids} />
+        </div>
       </header>
 
       {context ? (

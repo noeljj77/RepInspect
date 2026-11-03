@@ -1,10 +1,12 @@
+import { Link as LinkIcon } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 
-import { buttonClass } from '../ui/button'
 import { useAddRepository, useUploadZip } from '../../hooks/useRepositories'
 import { ZipPicker } from '../library/RepositoryActions'
+import { buttonClass } from '../ui/button'
 
+/** One bar: paste a GitHub link, or upload a ZIP instead. */
 export default function AddRepositoryForm() {
   const [url, setUrl] = useState('')
   const add = useAddRepository()
@@ -18,39 +20,46 @@ export default function AddRepositoryForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} aria-labelledby="add-repository-heading">
-      <h2 id="add-repository-heading" className="font-semibold">
+    <form
+      onSubmit={handleSubmit}
+      aria-labelledby="add-repository-heading"
+      className="rounded-xl border border-line bg-surface p-4 sm:p-5"
+    >
+      <h2 id="add-repository-heading" className="sr-only">
         Analyze a repository
       </h2>
-      <p className="mt-1 text-sm text-muted">
-        Paste the link to a public GitHub repository, or upload a project as a .zip file (up to 50 MB).
-      </p>
-
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <input
-          type="text"
-          inputMode="url"
-          name="url"
-          aria-label="GitHub repository URL"
-          placeholder="https://github.com/owner/repository"
-          autoComplete="off"
-          spellCheck={false}
-          required
-          value={url}
-          onChange={(event) => setUrl(event.target.value)}
-          className="h-10 min-w-0 flex-1 rounded-md border border-line bg-canvas px-3 font-mono text-[14px] placeholder:text-faint hover:border-faint focus:border-mark focus:outline-none focus:ring-1 focus:ring-mark"
-        />
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative min-w-0 flex-1">
+          <LinkIcon
+            size={16}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-faint"
+            aria-hidden="true"
+          />
+          <input
+            type="text"
+            inputMode="url"
+            name="url"
+            aria-label="GitHub repository URL"
+            placeholder="https://github.com/owner/repository"
+            autoComplete="off"
+            spellCheck={false}
+            required
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            className="h-10 w-full rounded-md border border-line bg-canvas pr-3 pl-9 font-mono text-[14px] placeholder:text-faint hover:border-faint focus:border-mark focus:ring-1 focus:ring-mark focus:outline-none"
+          />
+        </div>
         <button type="submit" disabled={add.isPending} className={buttonClass('primary', 'sm:w-32')}>
           {add.isPending ? 'Adding…' : 'Analyze'}
         </button>
       </div>
-
-      <div className="mt-3 flex items-center gap-3 text-sm text-muted">
-        <span>or</span>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted">
+        <span>Not on GitHub, or not public? Upload the project as a ZIP:</span>
         <ZipPicker
           label={upload.isPending ? 'Uploading…' : 'Upload a ZIP'}
           onPick={(file) => upload.mutate(file, { onSuccess: open })}
           disabled={upload.isPending}
+          variant="ghost"
         />
       </div>
 

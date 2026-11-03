@@ -42,7 +42,7 @@ describe('login', () => {
     await user.type(screen.getByLabelText('Password'), 'analytical-engine')
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your library' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/dashboard')
 
     const loginCall = fetchMock.mock.calls.find(([url]) => url === '/api/auth/login')
@@ -88,7 +88,7 @@ describe('register', () => {
     await user.type(screen.getByLabelText('Password'), 'analytical-engine')
     await user.click(screen.getByRole('button', { name: 'Create account' }))
 
-    expect(await screen.findByRole('heading', { name: 'Welcome, Ada' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your library' })).toBeInTheDocument()
     const call = fetchMock.mock.calls.find(([url]) => url === '/api/auth/register')
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
       display_name: 'Ada',
