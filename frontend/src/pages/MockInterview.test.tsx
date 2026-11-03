@@ -223,7 +223,7 @@ describe('The report', () => {
     await user.click(await screen.findByRole('button', { name: 'End the interview' }))
 
     expect(sent(fetchMock, `${base}/mock-interviews/${ID}/finish`)).toHaveLength(1)
-    const report = await screen.findByRole('region', { name: 'Interview report' })
+    const report = await screen.findByRole('region', { name: /Mock interview report/ })
     expect(report).toHaveTextContent('75%')
     expect(report).toHaveTextContent('1 question, 1 follow-up')
     expect(within(report).getByRole('list', { name: 'By topic' })).toHaveTextContent('Architecture3.0/4')

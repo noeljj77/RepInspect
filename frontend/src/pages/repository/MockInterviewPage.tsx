@@ -3,11 +3,13 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 
 import type { MockInterview, Report, Turn } from '../../api/mock'
+import ExportMenu from '../../components/interview/ExportMenu'
 import GradeView, { ClaimList } from '../../components/mock/GradeView'
 import { buttonClass } from '../../components/ui/button'
 import { useInterview, useInterviewActions } from '../../hooks/useMock'
 import { useRepositoryContext } from '../../hooks/useRepositoryContext'
 import { cn } from '../../lib/cn'
+import { mockReportMarkdown } from '../../lib/exportReport'
 import { fileLink } from '../../lib/links'
 
 /** Minutes and seconds since the question was asked: interviews have a pace. */
@@ -115,11 +117,20 @@ function TurnView({ repositoryId, interview, turn, number }: { repositoryId: str
 }
 
 function ReportView({ repositoryId, report }: { repositoryId: string; report: Report }) {
+  const { repository } = useRepositoryContext()
+  const name = repository.owner ? `${repository.owner}/${repository.name}` : repository.name
   return (
-    <section aria-labelledby="report-heading" className="mb-8 rounded-xl border border-line bg-surface p-5">
-      <h2 id="report-heading" className="sr-only">
-        Interview report
+    <section
+      aria-labelledby="report-heading"
+      data-print-area
+      className="mb-8 rounded-xl border border-line bg-surface p-5"
+    >
+      <h2 id="report-heading" className="sr-only print:not-sr-only print:mb-4 print:text-2xl print:font-semibold">
+        Mock interview report: {name}
       </h2>
+      <div className="mb-4 flex justify-end">
+        <ExportMenu title={`Mock interview report ${name}`} getMarkdown={() => mockReportMarkdown(name, report)} />
+      </div>
       <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
         <p>
           <span className="block text-5xl font-semibold tracking-tight">
@@ -186,7 +197,7 @@ function ReportView({ repositoryId, report }: { repositoryId: string; report: Re
           <ul className="mt-1.5 space-y-1">
             {report.files_to_review.map((path) => (
               <li key={path}>
-                <Link to={fileLink(repositoryId, path)} className="font-mono text-[13px] text-mark hover:underline">
+                <Link to={fileLink(repositoryId, path)} className="font-mono text-[13px] text-mark-text hover:underline">
                   {path}
                 </Link>
               </li>

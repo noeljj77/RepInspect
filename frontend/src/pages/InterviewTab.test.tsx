@@ -88,6 +88,25 @@ describe('Interview tab: notes', () => {
     expect(notes).toHaveTextContent('Add type hints')
   })
 
+  it('exports the notes as a Markdown file or through the print dialog', async () => {
+    const user = userEvent.setup()
+    let saved: Blob | undefined
+    URL.createObjectURL = vi.fn((blob: Blob) => ((saved = blob), 'blob:notes'))
+    URL.revokeObjectURL = vi.fn()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {})
+    open({ [`GET ${base}/ai/report`]: { body: explanation('report', report()) } })
+
+    await user.click(await screen.findByText('Export'))
+    await user.click(screen.getByRole('button', { name: 'Download as Markdown' }))
+
+    expect(click).toHaveBeenCalledTimes(1)
+    expect(await saved?.text()).toContain('# Interview notes: pallets/flask')
+    await user.click(screen.getByText('Export'))
+    await user.click(screen.getByRole('button', { name: 'Save as PDF' }))
+    expect(print).toHaveBeenCalledTimes(1)
+  })
+
   it('offers to write the notes', async () => {
     open()
 

@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
 
 import type { ReportContent } from '../../api/ai'
+import { useRepositoryContext } from '../../hooks/useRepositoryContext'
+import { notesMarkdown } from '../../lib/exportReport'
 import ExplanationPanel from '../ai/ExplanationPanel'
 import { FindingList, UngroundedPaths } from '../ai/Findings'
+import ExportMenu from './ExportMenu'
 
 function Part({ title, hint, children }: { title: string; hint?: string; children: ReactNode }) {
   return (
@@ -28,8 +31,14 @@ function Suggestions({ title, items }: { title: string; items: string[] }) {
 }
 
 function Report({ repositoryId, content }: { repositoryId: string; content: ReportContent }) {
+  const { repository } = useRepositoryContext()
+  const name = repository.owner ? `${repository.owner}/${repository.name}` : repository.name
   return (
-    <div>
+    <div data-print-area>
+      <h1 className="mb-4 hidden text-2xl font-semibold print:block">Interview notes: {name}</h1>
+      <div className="mb-4 flex justify-end">
+        <ExportMenu title={`Interview notes ${name}`} getMarkdown={() => notesMarkdown(name, content)} />
+      </div>
       {/* The one thing people say in almost every interview, set large. */}
       <figure className="mb-6">
         <figcaption className="mb-2 text-sm text-muted">When they say “tell me about this project”</figcaption>
