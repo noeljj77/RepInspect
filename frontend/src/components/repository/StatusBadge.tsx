@@ -22,7 +22,7 @@ export default function StatusBadge({ status }: { status: AnalysisStatus }) {
         'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium',
         status === 'completed' && 'border-ok/30 text-ok',
         status === 'failed' && 'border-danger/30 text-danger',
-        working && 'border-mark/30 text-mark',
+        working && 'border-mark/30 text-mark-text',
       )}
     >
       <Icon size={13} strokeWidth={2} className={cn(working && 'animate-spin')} aria-hidden="true" />

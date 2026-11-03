@@ -2,7 +2,7 @@
 export default function DemoPlayer() {
   return (
     <figure>
-      <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-[0_24px_60px_-28px_rgba(0,0,0,0.7)]">
+      <div className="overflow-hidden rounded-xl border border-line bg-surface shadow-lift">
         <picture>
           <source media="(prefers-reduced-motion: reduce)" srcSet="/how-it-works-still.png" />
           <img

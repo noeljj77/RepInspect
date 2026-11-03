@@ -79,7 +79,7 @@ function NoteItem({ repositoryId, note, showPlace }: { repositoryId: string; not
       {showPlace && note.path && (
         <Link
           to={fileLink(repositoryId, note.path, note.line)}
-          className="mb-1 inline-block font-mono text-[12px] text-mark hover:underline"
+          className="mb-1 inline-block font-mono text-[12px] text-mark-text hover:underline"
         >
           {note.path}
           {note.line ? `:${note.line}` : ''}

@@ -152,7 +152,7 @@ function Conversation({ repositoryId, chatId, onDeleted }: { repositoryId: strin
     return (
       <div role="alert" className="text-sm">
         <p className="text-danger">This conversation could not be opened. It may have been deleted.</p>
-        <Link to="?" className="mt-2 inline-block text-mark hover:underline">
+        <Link to="?" className="mt-2 inline-block text-mark-text hover:underline">
           Start a new conversation
         </Link>
       </div>

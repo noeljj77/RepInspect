@@ -38,7 +38,7 @@ function Content({
                 <button
                   type="button"
                   onClick={() => onSelectLine(symbol.start_line)}
-                  className="mr-2 font-mono text-[13px] text-mark hover:underline"
+                  className="mr-2 font-mono text-[13px] text-mark-text hover:underline"
                   title={`Go to line ${symbol.start_line}`}
                 >
                   {symbol.qualified_name}

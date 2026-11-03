@@ -100,7 +100,7 @@ export default function SidebarCollections() {
   return (
     <section aria-labelledby="collections-heading">
       <div className="mb-1.5 flex items-center justify-between px-2.5">
-        <h2 id="collections-heading" className="text-xs text-faint">
+        <h2 id="collections-heading" className="font-mono text-[11px] tracking-wide text-faint">
           Collections
         </h2>
         <button

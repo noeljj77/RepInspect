@@ -95,7 +95,7 @@ export default function DependenciesTab() {
           {groupBySource(filtered).map(([source, deps]) => (
             <section key={source} aria-label={source} className="overflow-hidden rounded-xl border border-line bg-surface">
               <header className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-5 py-3">
-                <Link to={fileLink(repository.id, source)} className="font-mono text-[13px] text-mark hover:underline">
+                <Link to={fileLink(repository.id, source)} className="font-mono text-[13px] text-mark-text hover:underline">
                   {source}
                 </Link>
                 <span className="text-sm text-muted">

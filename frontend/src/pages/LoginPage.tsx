@@ -28,7 +28,7 @@ export default function LoginPage() {
       footer={
         <>
           New to RepInspect?{' '}
-          <Link to="/register" className="text-ink underline underline-offset-4 hover:text-mark">
+          <Link to="/register" className="text-ink underline underline-offset-4 hover:text-mark-text">
             Create an account
           </Link>
         </>

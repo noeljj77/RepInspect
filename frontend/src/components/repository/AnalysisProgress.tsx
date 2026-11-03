@@ -36,7 +36,7 @@ export default function AnalysisProgress({
                 className={cn(
                   'mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border',
                   done && 'border-ok/40 text-ok',
-                  active && 'border-mark/40 text-mark',
+                  active && 'border-mark/40 text-mark-text',
                   !done && !active && 'border-line text-faint',
                 )}
               >

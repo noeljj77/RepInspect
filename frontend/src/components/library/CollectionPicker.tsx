@@ -39,7 +39,7 @@ export default function CollectionPicker({ repositoryId, memberOf }: { repositor
         <FolderPlus size={12} aria-hidden="true" />
         {names.length === 0 ? 'Add to a collection' : names.join(', ')}
       </summary>
-      <div className="absolute left-0 z-10 mt-1.5 w-64 rounded-lg border border-line bg-surface p-2 shadow-[0_12px_30px_-12px_rgba(0,0,0,0.6)]">
+      <div className="absolute left-0 z-10 mt-1.5 w-64 rounded-lg border border-line bg-surface p-2 shadow-pop">
         {collections.length > 0 && (
           <fieldset>
             <legend className="sr-only">Collections</legend>

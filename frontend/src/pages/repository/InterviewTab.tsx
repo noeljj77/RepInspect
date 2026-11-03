@@ -61,7 +61,7 @@ function GenerateForm({ repositoryId, hasQuestions }: { repositoryId: string; ha
               onClick={() => toggle(category)}
               className={cn(
                 'rounded-full border px-2.5 py-0.5 text-xs',
-                active ? 'border-mark/50 bg-mark/15 text-mark' : 'border-line text-muted hover:border-faint hover:text-ink',
+                active ? 'border-mark/50 bg-mark/15 text-mark-text' : 'border-line text-muted hover:border-faint hover:text-ink',
               )}
             >
               {CATEGORY_LABELS[category]}

@@ -3,7 +3,7 @@ import { cn } from '../../lib/cn'
 import { CitationLink, FindingList } from '../ai/Findings'
 
 const VERDICTS: Record<Verdict, { label: string; rule: string; tone: string }> = {
-  supported: { label: 'The code agrees', rule: 'border-l-2 border-mark', tone: 'text-mark' },
+  supported: { label: 'The code agrees', rule: 'border-l-2 border-mark', tone: 'text-mark-text' },
   contradicted: { label: 'The code says otherwise', rule: 'border-l-2 border-danger', tone: 'text-danger' },
   not_found: { label: 'Not in the code that was searched', rule: 'border-l-2 border-line', tone: 'text-muted' },
   unverified: { label: 'Could not be checked', rule: 'border-l-2 border-dashed border-hint/70', tone: 'text-hint' },
@@ -18,7 +18,7 @@ export function ScoreBadge({ score, label }: { score: number; label: string }) {
           <span key={n} className={cn('h-2.5 w-4 rounded-sm', n <= score ? (score >= 3 ? 'bg-ok' : 'bg-mark') : 'bg-raised')} />
         ))}
       </span>
-      <span className={cn('font-medium', score >= 3 ? 'text-ok' : score >= 2 ? 'text-mark' : 'text-danger')}>{label}</span>
+      <span className={cn('font-medium', score >= 3 ? 'text-ok' : score >= 2 ? 'text-mark-text' : 'text-danger')}>{label}</span>
     </span>
   )
 }
@@ -73,7 +73,7 @@ export default function GradeView({ repositoryId, grade }: { repositoryId: strin
       <p className="leading-relaxed">{grade.summary}</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <List title="What went well" items={grade.strengths} tone="text-ok" />
-        <List title="What was missing" items={grade.gaps} tone="text-mark" />
+        <List title="What was missing" items={grade.gaps} tone="text-mark-text" />
       </div>
       {grade.claims.length > 0 && (
         <div>

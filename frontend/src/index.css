@@ -1,25 +1,62 @@
 @import 'tailwindcss';
 
+/*
+ * Colour tokens. Dark is the default; the light values below replace them when
+ * <html data-theme="light"> is set (see hooks/useTheme.ts) and when printing.
+ *
+ * mark   = taken from the repository (highlighted lines, citations) and the primary action
+ * hint   = an AI suggestion that is not verified against the code
+ */
 @theme {
   --font-sans: 'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'Fragment Mono', ui-monospace, 'Cascadia Code', monospace;
 
-  --color-canvas: #151a24;
-  --color-surface: #1c2230;
-  --color-raised: #232a3a;
-  --color-line: #2e3648;
-  --color-ink: #e7eaf0;
-  --color-muted: #949db0;
-  --color-faint: #636c84;
+  --color-canvas: #0f131a;
+  --color-surface: #161b24;
+  --color-raised: #1e2531;
+  --color-line: #283040;
+  --color-ink: #e8ebf1;
+  --color-muted: #9aa4b6;
+  --color-faint: #737d92;
 
-  /* Highlighter: evidence taken from the repository, and the primary action. */
-  --color-mark: #f2c14e;
-  --color-mark-ink: #221a05;
-  /* AI-generated suggestions that are not verified against the code. */
-  --color-hint: #93a4f5;
+  --color-mark: #f5c451;
+  --color-mark-ink: #231a05;
+  /* The highlighter colour used as text, which needs more contrast on a light page. */
+  --color-mark-text: #f5c451;
+  --color-hint: #9aa8ff;
 
-  --color-ok: #7fd1a4;
-  --color-danger: #ef8a8a;
+  --color-ok: #6fd3a0;
+  --color-danger: #f08a8a;
+
+  --shadow-pop: 0 14px 34px -14px rgb(0 0 0 / 0.7);
+  --shadow-lift: 0 26px 64px -30px rgb(0 0 0 / 0.75);
+
+  /* Tighter corners than the defaults: precise, like an editor, not bubbly. */
+  --radius-md: 0.3125rem;
+  --radius-lg: 0.4375rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.875rem;
+}
+
+:root[data-theme='light'] {
+  --color-canvas: #f3f5f8;
+  --color-surface: #ffffff;
+  --color-raised: #e9edf3;
+  --color-line: #d6dce6;
+  --color-ink: #121826;
+  --color-muted: #4d586c;
+  --color-faint: #6a7589;
+
+  --color-mark: #f2bd3e;
+  --color-mark-ink: #231a05;
+  --color-mark-text: #85560a;
+  --color-hint: #4a58c8;
+
+  --color-ok: #1b7f54;
+  --color-danger: #bd2f2f;
+
+  --shadow-pop: 0 14px 34px -14px rgb(18 24 38 / 0.28);
+  --shadow-lift: 0 26px 64px -34px rgb(18 24 38 / 0.35);
 }
 
 @layer base {
@@ -27,13 +64,37 @@
     color-scheme: dark;
   }
 
+  html[data-theme='light'] {
+    color-scheme: light;
+  }
+
   body {
     @apply bg-canvas text-ink font-sans antialiased;
     font-optical-sizing: auto;
+    /* A faint dot grid, like squared paper: it gives the page a surface without competing with content. */
+    background-image: radial-gradient(color-mix(in srgb, var(--color-ink) 9%, transparent) 1px, transparent 1px);
+    background-size: 22px 22px;
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  h1 {
+    letter-spacing: -0.025em;
+  }
+
+  /* Tables of figures should line up. */
+  dd,
+  td {
+    font-variant-numeric: tabular-nums;
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-mark);
+    outline: 2px solid var(--color-mark-text);
     outline-offset: 2px;
   }
 
@@ -43,8 +104,21 @@
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-mark) 35%, transparent);
+    background: color-mix(in srgb, var(--color-mark) 40%, transparent);
+    color: var(--color-ink);
   }
+}
+
+/* Switching theme: let colours ease over instead of flashing. Not applied on first load. */
+html.theme-changing,
+html.theme-changing *,
+html.theme-changing *::before,
+html.theme-changing *::after {
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    fill 0.25s ease !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -53,5 +127,58 @@
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * Printing (Save as PDF) shows only the report marked with data-print-area, on white paper
+ * with the light colours, whichever theme is on screen.
+ */
+@media print {
+  :root {
+    --color-canvas: #ffffff;
+    --color-surface: #ffffff;
+    --color-raised: #f1f3f7;
+    --color-line: #d6dce6;
+    --color-ink: #121826;
+    --color-muted: #4d586c;
+    --color-faint: #6a7589;
+    --color-mark: #f2bd3e;
+    --color-mark-text: #85560a;
+    --color-hint: #4a58c8;
+    --color-ok: #1b7f54;
+    --color-danger: #bd2f2f;
+    color-scheme: light;
+  }
+
+  body {
+    background-image: none;
+  }
+
+  /* Hide everything except the report and the elements that contain it. */
+  body *:not([data-print-area]):not(:has([data-print-area])):not([data-print-area] *) {
+    display: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  [data-print-area] {
+    border: 0 !important;
+    padding: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .app-shell {
+    display: block !important;
+  }
+
+  [data-print-area] a {
+    color: inherit;
+    text-decoration: none;
   }
 }

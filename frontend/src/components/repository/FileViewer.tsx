@@ -78,7 +78,7 @@ function Insights({
               {item.resolved_path ? (
                 <Link
                   to={fileLink(repositoryId, item.resolved_path)}
-                  className="font-mono text-[13px] text-mark hover:underline"
+                  className="font-mono text-[13px] text-mark-text hover:underline"
                 >
                   {item.module}
                 </Link>
@@ -97,7 +97,7 @@ function Insights({
         <ul className="space-y-1">
           {file.imported_by.map((path) => (
             <li key={path} className="truncate">
-              <Link to={fileLink(repositoryId, path)} className="font-mono text-[13px] text-mark hover:underline">
+              <Link to={fileLink(repositoryId, path)} className="font-mono text-[13px] text-mark-text hover:underline">
                 {path}
               </Link>
             </li>
@@ -144,7 +144,7 @@ export default function FileViewer({ repositoryId, path, line, onSelectLine }: P
             .join(', ')}
         </p>
         {file.importance_reasons.length > 0 && (
-          <p className="mt-1 text-sm text-mark">{file.importance_reasons.join(', ')}</p>
+          <p className="mt-1 text-sm text-mark-text">{file.importance_reasons.join(', ')}</p>
         )}
         {file.parse_error && (
           <p className="mt-2 flex gap-2 text-sm text-muted">

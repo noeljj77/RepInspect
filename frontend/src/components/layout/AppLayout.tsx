@@ -7,6 +7,7 @@ import { useRepositories } from '../../hooks/useRepositories'
 import { cn } from '../../lib/cn'
 import SidebarCollections from '../library/SidebarCollections'
 import { Logo } from '../ui/Logo'
+import ThemeSwitch from '../ui/ThemeSwitch'
 import ServiceStatus from './ServiceStatus'
 
 /** Log out, then land on the home page rather than bouncing through the login redirect. */
@@ -41,8 +42,9 @@ function AccountMenu() {
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'flex h-8 min-w-0 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors',
-    isActive ? 'bg-raised text-ink' : 'text-muted hover:bg-raised/50 hover:text-ink',
+    // The active item is marked like a highlighted line of code: an amber bar in the margin.
+    'flex h-8 min-w-0 items-center gap-2.5 rounded-r-md border-l-2 px-2.5 text-sm transition-colors',
+    isActive ? 'border-mark bg-mark/10 text-ink' : 'border-transparent text-muted hover:bg-raised/60 hover:text-ink',
   )
 
 /** Every repository in the library, one click away from any page. */
@@ -51,7 +53,7 @@ function SidebarRepositories() {
 
   return (
     <section aria-labelledby="sidebar-repositories">
-      <h2 id="sidebar-repositories" className="mb-1.5 px-2.5 text-xs text-faint">
+      <h2 id="sidebar-repositories" className="mb-1.5 px-2.5 font-mono text-[11px] tracking-wide text-faint">
         Repositories
       </h2>
       {repositories.length === 0 ? (
@@ -88,14 +90,17 @@ export default function AppLayout() {
   const signOut = useSignOut()
 
   return (
-    <div className="min-h-dvh md:grid md:grid-cols-[15.5rem_1fr]">
+    <div className="app-shell min-h-dvh md:grid md:grid-cols-[15.5rem_1fr]">
       <aside className="flex flex-col border-b border-line bg-surface md:sticky md:top-0 md:h-dvh md:border-r md:border-b-0">
         <div className="flex h-14 shrink-0 items-center justify-between px-4">
           <Logo to="/dashboard" />
           {/* On small screens the account menu is hidden, so logging out lives up here. */}
-          <button type="button" onClick={signOut} className="text-sm text-muted hover:text-ink md:hidden">
-            Log out
-          </button>
+          <div className="flex items-center gap-4 md:hidden">
+            <ThemeSwitch label={false} />
+            <button type="button" onClick={signOut} className="text-sm text-muted hover:text-ink">
+              Log out
+            </button>
+          </div>
         </div>
         <nav aria-label="Main" className="px-2 pb-3 md:pb-0">
           <NavLink to="/dashboard" className={linkClass}>
@@ -109,6 +114,7 @@ export default function AppLayout() {
         </div>
         <div className="hidden md:block">
           <ServiceStatus />
+          <ThemeSwitch className="w-full justify-between border-t border-line px-4 py-2.5" />
           <AccountMenu />
         </div>
       </aside>

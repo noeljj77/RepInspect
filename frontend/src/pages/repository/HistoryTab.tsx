@@ -33,7 +33,7 @@ function PathList({
         {changes.paths.map((path) => (
           <li key={path} className={cn('truncate border-l-2 pl-2', tone)}>
             {linkable ? (
-              <Link to={fileLink(repositoryId, path)} className="hover:text-mark hover:underline">
+              <Link to={fileLink(repositoryId, path)} className="hover:text-mark-text hover:underline">
                 {path}
               </Link>
             ) : (
@@ -110,7 +110,7 @@ function Version({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <h3 className="font-medium">Version {version.version}</h3>
         <StatusBadge status={version.status} />
-        {isCurrent && <span className="text-xs text-mark">Shown now</span>}
+        {isCurrent && <span className="text-xs text-mark-text">Shown now</span>}
         <span className="text-sm text-muted">
           {formatDate(version.created_at)} ({formatRelativeTime(version.created_at)})
         </span>

@@ -32,7 +32,7 @@ export default function ImportSummary({ analysis }: { analysis: AnalysisSummary 
       </p>
 
       {analysis.truncated && (
-        <p className="mt-3 flex gap-2 rounded-md border border-mark/30 px-3 py-2 text-sm text-mark">
+        <p className="mt-3 flex gap-2 rounded-md border border-mark/30 px-3 py-2 text-sm text-mark-text">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
           <span>This repository is large, so only the first files were imported. The rest were left out.</span>
         </p>

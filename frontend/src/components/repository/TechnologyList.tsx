@@ -71,7 +71,7 @@ function TechnologyItem({
   return (
     <li>
       <details className="group rounded-lg border border-line bg-canvas open:w-full open:basis-full">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 text-sm hover:text-mark">
+        <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-1.5 text-sm hover:text-mark-text">
           <span className="font-medium">{tech.name}</span>
           {tech.dev_only && (
             <span className="text-xs text-muted" title="Only a development dependency, used only from tests">
@@ -91,7 +91,7 @@ function TechnologyItem({
               <span className="text-faint">{KIND_LABELS[item.kind]}</span>
               <Link
                 to={fileLink(repositoryId, item.path, item.line)}
-                className="font-mono text-[13px] text-mark hover:underline"
+                className="font-mono text-[13px] text-mark-text hover:underline"
               >
                 {item.path}
                 {item.line ? `:${item.line}` : ''}

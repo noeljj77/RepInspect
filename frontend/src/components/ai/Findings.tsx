@@ -19,8 +19,8 @@ export function CitationLink({
       to={fileLink(repositoryId, citation.path, citation.start_line)}
       className="group block min-w-0 rounded-md border border-mark/20 bg-mark/[0.07] px-2.5 py-1.5 hover:border-mark/50"
     >
-      <span className="block font-mono text-[12px] wrap-anywhere text-mark group-hover:underline">
-        {label && <span className="mr-1.5 text-mark/70">{label}</span>}
+      <span className="block font-mono text-[12px] wrap-anywhere text-mark-text group-hover:underline">
+        {label && <span className="mr-1.5 text-mark-text/70">{label}</span>}
         {citationPlace(citation)}
       </span>
       <code className="mt-0.5 block font-mono text-[12.5px] leading-5 whitespace-pre-wrap wrap-anywhere text-ink/85">

@@ -21,7 +21,7 @@ function Marker({ numbers, citations, repositoryId }: { numbers: number[]; citat
             to={fileLink(repositoryId, citation.path, citation.start_line)}
             title={citationPlace(citation)}
             aria-label={`Source ${number}: ${citationPlace(citation)}`}
-            className="mx-0.5 inline-block rounded bg-mark/15 px-1.5 align-baseline font-mono text-[12px] leading-5 text-mark hover:bg-mark/25"
+            className="mx-0.5 inline-block rounded bg-mark/15 px-1.5 align-baseline font-mono text-[12px] leading-5 text-mark-text hover:bg-mark/25"
           >
             {number}
           </Link>

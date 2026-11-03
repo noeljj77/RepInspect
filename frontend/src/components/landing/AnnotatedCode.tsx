@@ -10,7 +10,7 @@ type Line = { n: number; parts: Array<[string, Tone]> }
 const toneClass: Record<Tone, string> = {
   plain: 'text-ink',
   kw: 'text-muted',
-  str: 'text-[#a8d5b5]',
+  str: 'text-ok',
   dec: 'text-faint',
 }
 
@@ -39,7 +39,7 @@ const highlighted = new Set([14, 15, 16])
 
 function Citation({ children }: { children: string }) {
   return (
-    <span className="mx-0.5 inline-block rounded bg-mark/15 px-1.5 py-px font-mono text-[12px] text-mark">
+    <span className="mx-0.5 inline-block rounded bg-mark/15 px-1.5 py-px font-mono text-[12px] text-mark-text">
       {children}
     </span>
   )
@@ -48,7 +48,7 @@ function Citation({ children }: { children: string }) {
 /** Static illustration of a cited answer, used in the landing page hero. */
 export default function AnnotatedCode() {
   return (
-    <figure className="overflow-hidden rounded-xl border border-line bg-surface shadow-[0_24px_60px_-30px_rgba(0,0,0,0.6)]">
+    <figure className="overflow-hidden rounded-xl border border-line bg-surface shadow-lift">
       <div className="flex items-center gap-2 border-b border-line px-4 py-2.5 text-sm text-muted">
         <FileCode2 size={15} strokeWidth={1.75} aria-hidden="true" />
         <span className="font-mono text-[13px]">api/auth.py</span>

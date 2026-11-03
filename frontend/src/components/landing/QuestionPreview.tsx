@@ -24,7 +24,7 @@ export default function QuestionPreview() {
       <dl className="mt-5 space-y-3 text-[15px]">
         <div>
           <dt className="text-sm text-muted">Source</dt>
-          <dd className="mt-0.5 font-mono text-[13px] text-mark">api/auth.py:14–16</dd>
+          <dd className="mt-0.5 font-mono text-[13px] text-mark-text">api/auth.py:14–16</dd>
         </div>
         <div>
           <dt className="text-sm text-muted">What the interviewer is testing</dt>

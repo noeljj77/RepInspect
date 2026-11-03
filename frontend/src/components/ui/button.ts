@@ -3,8 +3,9 @@ import { cn } from '../../lib/cn'
 type Variant = 'primary' | 'secondary' | 'ghost'
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-mark text-mark-ink hover:bg-[#f6cf6f] font-semibold',
-  secondary: 'border border-line bg-surface text-ink hover:border-faint',
+  primary:
+    'bg-mark text-mark-ink font-semibold shadow-[inset_0_1px_0_rgb(255_255_255/0.35)] hover:brightness-105 active:translate-y-px',
+  secondary: 'border border-line bg-surface text-ink hover:border-faint hover:bg-raised/50 active:translate-y-px',
   ghost: 'text-muted hover:text-ink',
 }
 

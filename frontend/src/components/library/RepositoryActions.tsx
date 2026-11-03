@@ -94,7 +94,7 @@ export default function RepositoryActions({ repository }: { repository: Reposito
           >
             <Ellipsis size={17} aria-hidden="true" />
           </summary>
-          <div className="absolute right-0 z-20 mt-1.5 w-64 rounded-lg border border-line bg-surface p-2 shadow-[0_12px_30px_-12px_rgba(0,0,0,0.6)]">
+          <div className="absolute right-0 z-20 mt-1.5 w-64 rounded-lg border border-line bg-surface p-2 shadow-pop">
             {confirming ? (
               <div className="space-y-2 p-1">
                 <p className="text-xs text-muted">

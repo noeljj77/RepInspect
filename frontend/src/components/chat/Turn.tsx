@@ -26,7 +26,7 @@ function Searched({ repositoryId, sources }: { repositoryId: string; sources: So
           <li key={`${source.path}:${source.start_line}`} className="flex flex-wrap items-baseline gap-x-2">
             <Link
               to={fileLink(repositoryId, source.path, source.start_line)}
-              className="font-mono text-[13px] text-ink/85 hover:text-mark hover:underline"
+              className="font-mono text-[13px] text-ink/85 hover:text-mark-text hover:underline"
             >
               {source.path}:{source.start_line}–{source.end_line}
             </Link>
