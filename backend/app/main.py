@@ -13,6 +13,7 @@ from app.db.session import SessionLocal
 from app.services import repositories
 from app.services.ai import jobs as ai_jobs
 from app.services.interview import questions as interview_questions
+from app.services.mock import flow as mock_flow
 from app.services.rag import chat_jobs, indexer
 from app.worker.runner import get_job_runner
 
@@ -29,6 +30,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
             + indexer.mark_interrupted(db)
             + chat_jobs.mark_interrupted(db)
             + interview_questions.mark_interrupted(db)
+            + mock_flow.mark_interrupted(db)
         )
     if interrupted:
         logger.warning("Marked %d interrupted jobs as failed", interrupted)

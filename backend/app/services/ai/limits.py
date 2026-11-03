@@ -1,4 +1,5 @@
-"""The per-user AI allowance, shared by explanations, chat and interview questions.
+"""The per-user AI allowance, shared by explanations, chat, interview
+questions and mock interview grading.
 
 Free model quotas are small, so each person gets a daily number of requests and a cap
 on how many may run at once. Every accepted request is logged in `ai_requests`, which
@@ -19,9 +20,12 @@ from app.models import (
     ChatMessage,
     ChatSession,
     MessageStatus,
+    MockInterview,
+    MockTurn,
     QuestionBatch,
     RepositoryAnalysis,
     SavedRepository,
+    TurnStatus,
     User,
 )
 
@@ -54,7 +58,14 @@ def _running(db: Session, user: User) -> int:
         .join(SavedRepository, SavedRepository.id == QuestionBatch.saved_repository_id)
         .where(SavedRepository.user_id == user.id, QuestionBatch.status == BatchStatus.PENDING)
     )
-    return (explanations or 0) + (answers or 0) + (batches or 0)
+    grading = db.scalar(
+        select(func.count())
+        .select_from(MockTurn)
+        .join(MockInterview, MockInterview.id == MockTurn.interview_id)
+        .join(SavedRepository, SavedRepository.id == MockInterview.saved_repository_id)
+        .where(SavedRepository.user_id == user.id, MockTurn.status == TurnStatus.GRADING)
+    )
+    return (explanations or 0) + (answers or 0) + (batches or 0) + (grading or 0)
 
 
 def check_allowance(db: Session, user: User) -> None:
