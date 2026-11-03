@@ -19,6 +19,16 @@ project report, repository-specific questions and a mock interview with feedback
 > Login rate limiting, logout revocation, security headers, Docker and CI are in place
 > too (see [docs/architecture.md](docs/architecture.md) and [docs/deployment.md](docs/deployment.md)).
 
+## Screenshots
+
+A cited chat answer, the library with practice progress, and the light theme.
+
+![A chat answer that quotes the exact lines of code it relies on](docs/screenshots/chat-answer.png)
+
+![The library: each repository shows its languages, size and how many practice questions are done](docs/screenshots/library.png)
+
+![The repository overview in the light theme](docs/screenshots/light-theme.png)
+
 ## Tech stack
 
 | Layer | Tools |
@@ -274,3 +284,7 @@ relative to the code, so the server can be started from any directory). See
 [`backend/.env.example`](backend/.env.example) for the available options. Secrets
 (API keys, JWT secret, database password) live only in `.env`, which is git-ignored,
 and are never exposed to the frontend.
+
+## License
+
+[MIT](LICENSE)
