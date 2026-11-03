@@ -19,6 +19,7 @@ class AiKind(StrEnum):
     OVERVIEW = "overview"
     TECHNOLOGIES = "technologies"
     FILE = "file"
+    REPORT = "report"  # interview notes
 
 
 class AiExplanation(Base):
@@ -30,7 +31,7 @@ class AiExplanation(Base):
         UniqueConstraint(
             "analysis_id", "kind", "target_path", name="uq_ai_explanations_analysis_kind_path"
         ),
-        CheckConstraint("kind IN ('overview', 'technologies', 'file')", name="kind"),
+        CheckConstraint("kind IN ('overview', 'technologies', 'file', 'report')", name="kind"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)

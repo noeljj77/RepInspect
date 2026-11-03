@@ -74,6 +74,27 @@ class RawKeySymbol(BaseModel):
     explanation: str
 
 
+class RawDecision(BaseModel):
+    decision: str  # what was decided, as it can be seen in the code
+    citations: list[RawCitation]
+    alternatives: list[str]  # general knowledge: what else could have been done
+    trade_offs: list[str]
+
+
+class RawImprovement(BaseModel):
+    idea: str
+    reason: str
+
+
+class RawReport(BaseModel):
+    pitch: str
+    problem: str
+    walkthrough: list[RawFinding]
+    decisions: list[RawDecision]
+    highlights: list[RawFinding]
+    improvements: list[RawImprovement]
+
+
 class RawFileExplanation(BaseModel):
     purpose: str
     determined: bool
@@ -143,5 +164,32 @@ class FileExplanationContent(BaseModel):
     inputs_outputs: str
     findings: list[Finding]
     key_symbols: list[KeySymbol]
+    ungrounded_paths: list[str] = []
+    removed_citations: int = 0
+
+
+class Decision(BaseModel):
+    # The decision as a finding: verified when a quote from the code backs it.
+    finding: Finding
+    alternatives: list[str]
+    trade_offs: list[str]
+
+
+class Improvement(BaseModel):
+    """A suggested next step. Always an opinion, never a fact about the code."""
+
+    idea: str
+    reason: str
+
+
+class ReportContent(BaseModel):
+    """What someone needs to talk about this project in an interview."""
+
+    pitch: str  # the answer to "tell me about this project", in a few sentences
+    problem: str
+    walkthrough: list[Finding]  # how the main flow works, in order
+    decisions: list[Decision]
+    highlights: list[Finding]  # technically interesting parts worth bringing up
+    improvements: list[Improvement]
     ungrounded_paths: list[str] = []
     removed_citations: int = 0

@@ -18,11 +18,13 @@ from app.services.ai.grounding import (
     SymbolRef,
     ground_file_explanation,
     ground_overview,
+    ground_report,
     ground_technologies,
 )
 from app.services.ai.schemas import (
     RawFileExplanation,
     RawOverview,
+    RawReport,
     RawTechnologies,
 )
 from app.services.llm.base import LLMProvider
@@ -32,6 +34,7 @@ from app.storage import artifacts
 OVERVIEW_MAX_TOKENS = 6000
 TECHNOLOGIES_MAX_TOKENS = 5000
 FILE_MAX_TOKENS = 3000
+REPORT_MAX_TOKENS = 6000
 
 
 @dataclass
@@ -42,7 +45,7 @@ class Generated:
     output_tokens: int | None
 
 
-def _reader(analysis_id: UUID):
+def source_reader(analysis_id: UUID):
     def read(path: str) -> str | None:
         data = artifacts.read_source_file(analysis_id, path)
         return data.decode("utf-8", errors="replace") if data is not None else None
@@ -53,7 +56,7 @@ def _reader(analysis_id: UUID):
 def generate_overview(
     provider: LLMProvider, facts: context.EvidenceFacts, analysis_id: UUID
 ) -> Generated:
-    reader = _reader(analysis_id)
+    reader = source_reader(analysis_id)
     boundary = context.new_boundary()
     pack = context.build_overview_pack(facts, reader, boundary, get_settings().ai_context_chars)
     result = provider.generate_structured(
@@ -86,7 +89,7 @@ def generate_file_explanation(
     provider: LLMProvider, facts: context.EvidenceFacts, analysis_id: UUID, path: str
 ) -> Generated:
     info = facts.files[path]
-    reader = _reader(analysis_id)
+    reader = source_reader(analysis_id)
     boundary = context.new_boundary()
     pack = context.build_file_pack(facts, info, reader, boundary, get_settings().ai_context_chars)
     result = provider.generate_structured(
@@ -97,4 +100,21 @@ def generate_file_explanation(
     )
     symbols = [SymbolRef(s.name, s.qualified_name, s.kind, s.start_line) for s in info.symbols]
     content = ground_file_explanation(result.data, symbols, Grounding(facts.files, reader))
+    return Generated(content, result.model, result.input_tokens, result.output_tokens)
+
+
+def generate_report(
+    provider: LLMProvider, facts: context.EvidenceFacts, analysis_id: UUID
+) -> Generated:
+    """Interview notes, from the same evidence as the overview."""
+    reader = source_reader(analysis_id)
+    boundary = context.new_boundary()
+    pack = context.build_overview_pack(facts, reader, boundary, get_settings().ai_context_chars)
+    result = provider.generate_structured(
+        system=prompts.SYSTEM_REPORT,
+        prompt=prompts.report_prompt(boundary, pack.text()),
+        schema=RawReport,
+        max_output_tokens=REPORT_MAX_TOKENS,
+    )
+    content = ground_report(result.data, Grounding(facts.files, reader))
     return Generated(content, result.model, result.input_tokens, result.output_tokens)

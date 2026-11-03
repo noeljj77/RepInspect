@@ -25,7 +25,7 @@ from app.worker.runner import JobRunner, get_job_runner
 
 router = APIRouter(prefix="/repositories/{repository_id}/ai", tags=["ai"])
 
-Kind = Literal["overview", "technologies", "file"]
+Kind = Literal["overview", "technologies", "file", "report"]
 
 
 def _target(kind: str, path: str | None, analysis: RepositoryAnalysis, db: Session) -> str:

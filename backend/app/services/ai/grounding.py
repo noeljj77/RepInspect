@@ -22,8 +22,10 @@ from collections.abc import Callable, Iterable
 from app.services.ai.schemas import (
     OVERVIEW_SECTIONS,
     Citation,
+    Decision,
     FileExplanationContent,
     Finding,
+    Improvement,
     KeySymbol,
     OverviewContent,
     OverviewSection,
@@ -31,7 +33,9 @@ from app.services.ai.schemas import (
     RawFileExplanation,
     RawFinding,
     RawOverview,
+    RawReport,
     RawTechnologies,
+    ReportContent,
     TechnologiesContent,
     TechnologyExplanation,
 )
@@ -331,4 +335,53 @@ def ground_file_explanation(
         key_symbols=key_symbols[:12],
         ungrounded_paths=grounding.ungrounded_paths(f"{purpose} {raw.inputs_outputs}"),
         removed_citations=removed,
+    )
+
+
+def _ground_findings(
+    raw: list[RawFinding], grounding: Grounding, limit: int = MAX_FINDINGS
+) -> tuple[list[Finding], int]:
+    findings: list[Finding] = []
+    removed = 0
+    for raw_finding in raw[:limit]:
+        finding, dropped = grounding.ground_finding(raw_finding)
+        removed += dropped
+        if finding.statement:
+            findings.append(finding)
+    return findings, removed
+
+
+def ground_report(raw: RawReport, grounding: Grounding) -> ReportContent:
+    walkthrough, removed_walk = _ground_findings(raw.walkthrough, grounding, limit=8)
+    highlights, removed_high = _ground_findings(raw.highlights, grounding)
+    decisions: list[Decision] = []
+    removed_dec = 0
+    for item in raw.decisions[:MAX_FINDINGS]:
+        finding, dropped = grounding.ground_finding(
+            RawFinding(statement=item.decision, citations=item.citations)
+        )
+        removed_dec += dropped
+        if finding.statement:
+            decisions.append(
+                Decision(
+                    finding=finding,
+                    alternatives=_clean_list(item.alternatives),
+                    trade_offs=_clean_list(item.trade_offs),
+                )
+            )
+    improvements = [
+        Improvement(idea=_clip(i.idea, MAX_STATEMENT), reason=_clip(i.reason, MAX_STATEMENT))
+        for i in raw.improvements[:MAX_LIST_ITEMS]
+        if i.idea.strip()
+    ]
+    pitch, problem = _clip(raw.pitch, MAX_SUMMARY), _clip(raw.problem, MAX_SUMMARY)
+    return ReportContent(
+        pitch=pitch,
+        problem=problem,
+        walkthrough=walkthrough,
+        decisions=decisions,
+        highlights=highlights,
+        improvements=improvements,
+        ungrounded_paths=grounding.ungrounded_paths(f"{pitch} {problem}"),
+        removed_citations=removed_walk + removed_high + removed_dec,
     )

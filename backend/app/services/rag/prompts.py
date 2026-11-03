@@ -1,7 +1,7 @@
 """Instructions for answering questions about a repository from retrieved excerpts."""
 
 from app.services.ai.context import Pack, numbered
-from app.services.ai.prompts import _UNTRUSTED
+from app.services.ai.prompts import UNTRUSTED_RULE
 from app.services.rag.retrieval import Retrieved
 
 SYSTEM_CHAT = f"""\
@@ -15,7 +15,7 @@ endpoints, tables, dependencies or behaviour.
 2. If the excerpts do not contain the answer, set answerable to false and say briefly what you \
 could not find, and which part of the code might hold it if the excerpts hint at that. Do not \
 guess. A partial answer is fine if you say which part is missing.
-3. {_UNTRUSTED}
+3. {UNTRUSTED_RULE}
 4. Back every statement about the code with a citation. A citation gives the file path exactly \
 as in the data blocks, the first and last line numbers (from the numbered lines), and a quote: \
 the exact text of those lines copied WITHOUT the "N| " prefixes.

@@ -50,6 +50,8 @@ def _generate(db: Session, record: AiExplanation) -> None:
         facts = context.load_facts(db, repository, analysis)
         if record.kind == AiKind.OVERVIEW:
             generated = generators.generate_overview(provider, facts, analysis.id)
+        elif record.kind == AiKind.REPORT:
+            generated = generators.generate_report(provider, facts, analysis.id)
         elif record.kind == AiKind.TECHNOLOGIES:
             generated = generators.generate_technologies(provider, facts)
         else:
