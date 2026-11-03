@@ -88,8 +88,8 @@ export default function AnnotatedCode() {
         <p className="flex gap-2.5 rounded-md border border-dashed border-hint/40 px-3 py-2.5 text-sm text-hint">
           <Lightbulb size={16} strokeWidth={1.75} className="mt-0.5 shrink-0" aria-hidden="true" />
           <span>
-            <span className="font-medium">Suggestion, not from the code:</span> this route has no rate limit, so
-            repeated password guesses aren't slowed down.
+            <span className="font-medium">Suggestion, not from the code:</span> failed logins are not logged here, so
+            repeated guesses against one account would go unnoticed.
           </span>
         </p>
       </figcaption>
